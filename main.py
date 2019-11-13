@@ -5,9 +5,9 @@ from PyQt5.QtCore import QIODevice, QByteArray
 from PyQt5.QtSerialPort import QSerialPort
 from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QDialog
 
-class Form(QDialog):
+class Gcode_controller(QDialog):
     def __init__(self, parent=None):
-        super(Form, self).__init__(parent)
+        super().__init__()
         
         layout = QVBoxLayout()
 
@@ -63,6 +63,6 @@ class Form(QDialog):
 ################# MAIN APPLICATION #################
 ####################################################
 app = QApplication([])
-ex = Form()
+ex = Gcode_controller()
 ex.show()
 sys.exit(app.exec_())
