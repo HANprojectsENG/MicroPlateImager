@@ -30,12 +30,12 @@ class Gcode_controller(QDialog):
 
     def btnstate(self):
         # button CONNECT / DISCONNECT
-        PrintHAT_serial = serial_comm.ser_comm("/dev/ttyUSB0", None)
+        PrintHAT_serial = serial_comm.ser_comm("/dev/ttyAMA0", None)
         
         if self.b_connect.isChecked():
             self.b_connect.setText("DISCONNECT")
             if not PrintHAT_serial.isOpen:
-                PrintHAT_serial = serial_comm.ser_comm("/dev/ttyUSB0", None)           
+                PrintHAT_serial = serial_comm.ser_comm("/dev/ttyAMA0", None)           
             PrintHAT_serial.writeHelloWorld()
         else:
             self.b_connect.setText("CONNECT")
