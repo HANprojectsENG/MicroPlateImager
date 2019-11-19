@@ -3,10 +3,11 @@ from PyQt5.QtSerialPort import QSerialPort
 from PyQt5.QtWidgets import *
 
 class ser_comm:
-    def __init__(self, port, parent=None):
+    def __init__(self, parent=None):
         super().__init__()
         self.isOpen = False
-        
+
+    def connect(self, port):
         # OPEN THE SERIAL PORT
         self.serial = QSerialPort(port)
         self.serial.setPortName(port)
@@ -14,22 +15,51 @@ class ser_comm:
         if self.serial.open(QIODevice.ReadWrite):
             self.isOpen = True
             print("Opened serial communication on port {}".format(port))
-            self.serial.setBaudRate(115200)
+            self.serial.setBaudRate(250000)
             
         else:
             raise IOError("Cannot connect to device on port {}".format(port))
             self.isOpen = False
-
-    def writeHelloWorld(self):
-        print("\nDEBUG: in function ser_comm::writeHelloWorld()")
-        homing = QByteArray()
-        homing.append("Hello World\r\n")
-        self.serial.write(homing)
         return
+    
+    def writeFirmwareRestart(self):
+        print("\nDEBUG: in function ser_comm::writeFirmwareRestart()")
+        firm_rest = QByteArray()
+        firm_rest.append("FIRMWARE_RESTART\r\n")
+        self.serial.write(firm_rest)
+        return
+
+    def writeHomeX(self):
+        print("\nDEBUG: in function ser_com::writeHomeX()")
+        HomeX = QByteArray()
+        HomeX.append("G28 X0")
+        self.serial.write(HomeX)
+        return
+
+    def writeGetPosition(self):
+        print("\nDEBUG: in function ser_com::writeGetPosition()")
+        position = QByteArray()
+        position.append("M114")
+        self.serial.write(position)
+        return
+
+    def writeXZero(self):
+        print("\nDEBUG: in function ser_com::writeXZero()")
+        position = QByteArray()
+        position.append("G0 X0")
+        self.serial.write(position)
+        return    
+
+    def writeXten(self):
+        print("\nDEBUG: in function ser_com::writeXTen()")
+        position = QByteArray()
+        position.append("G0 X10")
+        self.serial.write(position)
+        return  
     
     def dataAvailable(self):
         print("\nDEBUG: in function ser_comm::dataAvailable()")
-        readLine = self.serial.waitForReadyRead(10000)
+        readLine = self.serial.waitForReadyRead(2000)
         return readLine
 
     def readData(self):
