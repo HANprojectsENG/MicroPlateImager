@@ -1,3 +1,5 @@
+import os
+
 from PyQt5.QtCore import QIODevice, QByteArray
 from PyQt5.QtSerialPort import QSerialPort
 from PyQt5.QtWidgets import *
@@ -5,21 +7,23 @@ from PyQt5.QtWidgets import *
 class ser_comm:
     def __init__(self, parent=None):
         super().__init__()
-        self.isOpen = False
-
+        # make sure klipper service is active
+        os.system('sudo service klipper restart')
+        
     def connect(self, port):
+        print("\nDEBUG: in function ser_comm::connect(port)")
+        
         # OPEN THE SERIAL PORT
         self.serial = QSerialPort(port)
         self.serial.setPortName(port)
 
         if self.serial.open(QIODevice.ReadWrite):
-            self.isOpen = True
-            print("Opened serial communication on port {}".format(port))
+            print("\nDEBUG: Opened serial communication on port {}".format(port))
             self.serial.setBaudRate(250000)
-            
+
+        # new attempt after restarting klipper service, else raise connection error
         else:
-            raise IOError("Cannot connect to device on port {}".format(port))
-            self.isOpen = False
+            raise IOError("\nDEBUG: Cannot connect to device on port {}".format(port))
         return
     
     def writeFirmwareRestart(self):
@@ -32,43 +36,43 @@ class ser_comm:
     def writeHomeX(self):
         print("\nDEBUG: in function ser_com::writeHomeX()")
         HomeX = QByteArray()
-        HomeX.append("G28 X0")
+        HomeX.append("G28 X0\r\n")
         self.serial.write(HomeX)
         return
 
     def writeGetPosition(self):
         print("\nDEBUG: in function ser_com::writeGetPosition()")
         position = QByteArray()
-        position.append("M114")
+        position.append("M114\r\n")
         self.serial.write(position)
         return
 
+    def writeGotoX(self, pos):
+        print("\nDEBUG: in function ser_comm::writeGotoX()")
+        position = QByteArray()
+        position.append("G0 X")
+        position.append(pos)
+        position.append("\r\n")
+        self.serial.write(position)
+        return
+                          
     def writeXZero(self):
         print("\nDEBUG: in function ser_com::writeXZero()")
         position = QByteArray()
-        position.append("G0 X0")
+        position.append("G0 X0\r\n")
         self.serial.write(position)
         return    
-
-    def writeXten(self):
-        print("\nDEBUG: in function ser_com::writeXTen()")
-        position = QByteArray()
-        position.append("G0 X10")
-        self.serial.write(position)
-        return  
     
-    def dataAvailable(self):
-        print("\nDEBUG: in function ser_comm::dataAvailable()")
-        readLine = self.serial.waitForReadyRead(2000)
+    def readPort(self):
+        print("\nDEBUG: in function ser_comm::readPort()")
+        readLine = QByteArray()
+        if self.serial.bytesAvailable():
+            while not self.serial.atEnd():
+                newByte = self.serial.read(1)
+                readLine.append(newByte)
+            print(str(readLine))
         return readLine
-
-    def readData(self):
-        print("\nDEBUG: in function ser_comm::readData()")
-        output = self.serial.readAll()
-        print("output: " + str(output))
-        return
 
     def disconnect(self):
         print("\nDEBUG: in function ser_comm::disconnect()")
         self.serial.close()
-        self.isOpen = False
