@@ -50,14 +50,8 @@ class GUI(QDialog):
         # button GET_POSITION
         self.b_get_pos = QPushButton("GET_POSITION")
         self.b_get_pos.clicked.connect(self.getPos)
-        layoutGrid.addWidget(self.b_get_pos,2,0)
+        layoutGrid.addWidget(self.b_get_pos,1,2)
         
-        # button READ FOR 10S
-        self.b_read = QPushButton("REFRESH LOGGER")
-        self.b_read.toggle()
-        self.b_read.clicked.connect(self.readData)
-        layoutGrid.addWidget(self.b_read,2,1)    
-
         # logger screen
         self.log = QPlainTextEdit()
         self.log.setReadOnly(True)
