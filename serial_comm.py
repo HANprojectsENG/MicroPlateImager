@@ -1,8 +1,8 @@
 import os
 
 from PyQt5.QtCore import QIODevice, QByteArray
-from PyQt5.QtSerialPort import QSerialPort
-from PyQt5.QtWidgets import *
+from PyQt5.QtSerialPort import QSerialPort # package QtSerialPort not yet available for PySide2
+from PySide2.QtWidgets import *
 
 class ser_comm:
     def __init__(self, parent=None):
@@ -13,17 +13,20 @@ class ser_comm:
     def connect(self, port):
         print("\nDEBUG: in function ser_comm::connect(port)")
         
-        # OPEN THE SERIAL PORT
-        self.serial = QSerialPort(port)
-        self.serial.setPortName(port)
+        try:
+            # open the serial port
+            self.serial = QSerialPort(port)
+            self.serial.setPortName(port)
 
-        if self.serial.open(QIODevice.ReadWrite):
-            print("\nDEBUG: Opened serial communication on port {}".format(port))
-            self.serial.setBaudRate(250000)
+            if self.serial.open(QIODevice.ReadWrite):
+                print("\nDEBUG: Opened serial communication on port {}".format(port))
+                self.serial.setBaudRate(115200)
+            else:
+                raise IOError("\nDEBUG: Cannot connect to device on port {}".format(port))
 
-        # new attempt after restarting klipper service, else raise connection error
-        else:
-            raise IOError("\nDEBUG: Cannot connect to device on port {}".format(port))
+        except Exception as e:
+            print("Unable to open serial port", e)
+            
         return
     
     def writeFirmwareRestart(self):

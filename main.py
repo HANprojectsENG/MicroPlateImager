@@ -1,66 +1,80 @@
-import atexit
+#import atexit
 import sys
 import serial_comm
 
-from PyQt5.QtCore import QIODevice, QByteArray
-from PyQt5.QtSerialPort import QSerialPort
-from PyQt5.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit
-from PyQt5.QtGui import QFont
+from PyQt5.QtSerialPort import QSerialPort # package QtSerialPort not yet available for PySide2
+from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit
+from PySide2.QtGui import QFont
 
-class GUI(QDialog):
+class MainWindow(QDialog):
 
     PrintHAT_serial = serial_comm.ser_comm()
     
     def __init__(self, parent=None):
         super().__init__()
         
-        layout = QVBoxLayout()
+        self.mainWindowLayout = QGridLayout()
+        self.manualControlGridLayout = QGridLayout()       
+        self.processControlGridLayout = QGridLayout()        
 
-        self.gridGroupBox = QGroupBox("Control panel")
-        layoutGrid = QGridLayout()       
-        
+        #self.manualGroupBox = QGroupBox("Manual XY-control")
+        #self.batchGroupBox = QGroupBox("Batch control")
+
         # button CONNECT
         self.b_connect = QPushButton("CONNECT")
         self.b_connect.setCheckable(True)
         self.b_connect.setChecked(True)
         self.b_connect.toggle()
         self.b_connect.clicked.connect(self.connectHandler)
-        layoutGrid.addWidget(self.b_connect,0,0)
+        self.processControlGridLayout.addWidget(self.b_connect,0,0)
 
         # button FIRMWARE_RESET
         self.b_firm_rest = QPushButton("FIRMWARE_RESTART")
         self.b_firm_rest.clicked.connect(self.firmRes)
-        layoutGrid.addWidget(self.b_firm_rest,0,1)
+        self.processControlGridLayout.addWidget(self.b_firm_rest,1,0)
         
+        # button START BATCH
+        self.b_start_batch = QPushButton("START BATCH")
+        #self.b_start_batch.clicked.connect(self.startBatch)
+        self.processControlGridLayout.addWidget(self.b_start_batch)
+
+        # button STOP BATCH
+        self.b_stop_batch = QPushButton("STOP BATCH")
+        #self.b_start_batch.clicked.connect(self.stopBatch)
+        self.processControlGridLayout.addWidget(self.b_stop_batch)
+
         # button HOME X
         self.b_home_x = QPushButton("HOME X")
         self.b_home_x.clicked.connect(self.homeX)
-        layoutGrid.addWidget(self.b_home_x,0,2)
+        self.manualControlGridLayout.addWidget(self.b_home_x,0,0)
 
         # X position input field
         self.x_pos = QLineEdit()
         self.x_pos.setFont(QFont("Arial",20))
-        layoutGrid.addWidget(self.x_pos,1,0)
+        self.manualControlGridLayout.addWidget(self.x_pos,1,0)
 
-        # button GOTO X
-        self.b_goto_x = QPushButton("GOTO X")
+        # button MOVE
+        self.b_goto_x = QPushButton("MOVE")
         self.b_goto_x.clicked.connect(self.gotoX)
-        layoutGrid.addWidget(self.b_goto_x,1,1)
+        self.manualControlGridLayout.addWidget(self.b_goto_x,1,1)
         
         # button GET_POSITION
         self.b_get_pos = QPushButton("GET_POSITION")
         self.b_get_pos.clicked.connect(self.getPos)
-        layoutGrid.addWidget(self.b_get_pos,1,2)
+        self.manualControlGridLayout.addWidget(self.b_get_pos,0,1)
         
         # logger screen
         self.log = QPlainTextEdit()
         self.log.setReadOnly(True)
-        self.gridGroupBox.setLayout(layoutGrid)
-        layout.addWidget(self.gridGroupBox)
-        layout.addWidget(self.log)
+        
+        #self.manualGroupBox.setLayout(self.manualControlGridLayout)
+
+        self.mainWindowLayout.addLayout(self.manualControlGridLayout, 0, 0)
+        self.mainWindowLayout.addLayout(self.processControlGridLayout, 1, 0)
+        self.mainWindowLayout.addWidget(self.log, 1, 1)
         
         self.setWindowTitle("PrintHAT")
-        self.setLayout(layout)
+        self.setLayout(self.mainWindowLayout)
         
     # button CONNECT / DISCONNECT
     def connectHandler(self):
@@ -131,8 +145,8 @@ class GUI(QDialog):
 ################# MAIN APPLICATION #################
 ####################################################
 app = QApplication([])
-ex = GUI()
-ex.show()
+mwi = MainWindow()
+mwi.show()
 ret = app.exec_()
-ex.disconnectFromPortAtExit()
+mwi.disconnectFromPortAtExit()
 sys.exit(ret)
