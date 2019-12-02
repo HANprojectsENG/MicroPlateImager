@@ -1,4 +1,3 @@
-#import atexit
 import sys
 import serial_comm
 
