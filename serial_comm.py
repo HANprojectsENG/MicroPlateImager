@@ -1,11 +1,13 @@
 import os
 import serial
 
-from PyQt5.QtCore import QIODevice, QByteArray
-from PyQt5.QtSerialPort import QSerialPort # package QtSerialPort not yet available for PySide2
+#from PyQt5.QtCore import QIODevice, QByteArray
+#from PyQt5.QtSerialPort import QSerialPort # package QtSerialPort not yet available for PySide2
 from PySide2.QtWidgets import *
 
 class ser_comm:
+    connectionState = 0
+
     def __init__(self, parent=None):
         super().__init__()
         # make sure klipper service is active
@@ -16,12 +18,13 @@ class ser_comm:
         
         try:
             # open the serial port
-            self.serial = serial.Serial(port)#QSerialPort(port)
+            self.serial = serial.Serial(port, timeout=1)
 
             if not self.serial.is_open:
-                print("\nDEBUG: Cannot connect to device on port {}".format(port))
+                print("\nERROR: Cannot connect to device on port {}".format(port))
             else:
                 print("\nDEBUG: Opened serial communication on port {}".format(port))
+                self.connectionState = 1
 
         except Exception as e:
             print("Exception in Ser_comm::connect(self, port)", e)
@@ -54,8 +57,17 @@ class ser_comm:
     
     def readPort(self):
         print("\nDEBUG: in function ser_comm::readPort()")
-        return self.serial.readline()
+        data = self.serial.readline()
+        no_bytes_left = self.serial.inWaiting
+        if no_bytes_left:
+            data += self.serial.readline()
+        
+        return data
 
     def disconnect(self):
         print("\nDEBUG: in function ser_comm::disconnect()")
-        self.serial.close()
+        if self.connectionState == 1:
+            self.serial.close()
+        else:
+            print("No connection to be closed\n")
+
