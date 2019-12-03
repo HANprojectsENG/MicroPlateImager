@@ -1,8 +1,6 @@
 import os
 import serial
 
-#from PyQt5.QtCore import QIODevice, QByteArray
-#from PyQt5.QtSerialPort import QSerialPort # package QtSerialPort not yet available for PySide2
 from PySide2.QtWidgets import *
 
 class ser_comm:

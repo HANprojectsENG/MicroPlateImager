@@ -1,14 +1,16 @@
 import sys
 import serial_comm
+import stepper_motor
 
-#from PyQt5.QtSerialPort import QSerialPort # package QtSerialPort not yet available for PySide2
 from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit
 from PySide2.QtGui import QFont
 
 class MainWindow(QDialog):
 
     PrintHAT_serial = serial_comm.ser_comm()
-    
+
+    stepperX = stepper_motor.stepper()
+
     def __init__(self, parent=None):
         super().__init__()
         
@@ -154,10 +156,10 @@ class MainWindow(QDialog):
     def getPos(self):
         if self.b_connect.isChecked():
             self.PrintHAT_serial.writeGetPosition()
+            self.log.appendPlainText("Getting position...")
         else:
-            print("Pleas connect first with your serial port")
             self.log.appendPlainText("Please connect first with your serial port")
-        self.log.appendPlainText(str(self.readData()))
+            self.log.appendPlainText(str(self.readData()))
         return
         
     # button FIRMWARE_RESTART
@@ -165,7 +167,6 @@ class MainWindow(QDialog):
         if self.b_connect.isChecked():
             self.PrintHAT_serial.writeFirmwareRestart()
         else:
-            print("Please connect first with your serial port")
             self.log.appendPlainText("Please connect first with your serial port")
         self.log.appendPlainText(str(self.readData()))
         return
