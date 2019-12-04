@@ -44,10 +44,20 @@ class ser_comm:
         self.serial.write(b'M114\r\n')
         return
 
+    # @TODO: fuse writeGotoX with writeGotoY in one G0 X<pos> Y<pos> F<velocity> command
     def writeGotoX(self, pos):
         print("\nDEBUG: in function ser_comm::writeGotoX()")
         posStr = "G0 X" 
-        posStr += pos
+        posStr += str(pos)
+        posStr += "\r\n"
+        posByteArray = bytearray(posStr, 'utf-8')
+        self.serial.write(posByteArray)
+        return
+    
+    def writeGotoY(self, pos):
+        print("\nDEBUG: in function ser_comm::writeGotoX()")
+        posStr = "G0 Y" 
+        posStr += str(pos)
         posStr += "\r\n"
         posByteArray = bytearray(posStr, 'utf-8')
         self.serial.write(posByteArray)

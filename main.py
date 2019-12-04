@@ -2,14 +2,17 @@ import sys
 import serial_comm
 import stepper_motor
 
-from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit
+from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit, QFileDialog
 from PySide2.QtGui import QFont
 
 class MainWindow(QDialog):
 
+    # create serial instance used for writing G-code
     PrintHAT_serial = serial_comm.ser_comm()
 
+    # create stepper instances
     stepperX = stepper_motor.stepper()
+    stepperY = stepper_motor.stepper()
 
     def __init__(self, parent=None):
         super().__init__()
@@ -25,18 +28,30 @@ class MainWindow(QDialog):
         # groupbox with log window
         lgb = self.createLogWindow()
 
+        # groupbox with video stream window
+        vgb = self.createVideoWindow()
+
         # fill mainWindowLayout
         self.mainWindowLayout.addWidget(bgb,0,0)
         self.mainWindowLayout.addWidget(mgb,1,0)
+        self.mainWindowLayout.addWidget(vgb,0,1)
         self.mainWindowLayout.addWidget(lgb,1,1)
         
         self.setWindowTitle("PrintHAT")
         self.setLayout(self.mainWindowLayout)
+        self.resize(self.width(), self.height())
 
     def createBatchGroupBox(self):
         self.processControlGridLayout = QGridLayout()        
 
         self.batchGroupBox = QGroupBox("Batch control")
+
+        # button open settings init file
+        self.b_settingsFile = QPushButton("Open settings file")
+        self.b_settingsFile.clicked.connect(self.openIniFile)
+        self.processControlGridLayout.addWidget(self.b_settingsFile)
+
+        # open batch init file
 
         # button CONNECT
         self.b_connect = QPushButton("DISCONNECTED")
@@ -45,22 +60,22 @@ class MainWindow(QDialog):
         self.b_connect.setChecked(True)
         self.b_connect.toggle()
         self.b_connect.clicked.connect(self.connectHandler)
-        self.processControlGridLayout.addWidget(self.b_connect,0,0)
+        self.processControlGridLayout.addWidget(self.b_connect,2,0)
 
         # button FIRMWARE_RESET
         self.b_firm_rest = QPushButton("FIRMWARE_RESTART")
         self.b_firm_rest.clicked.connect(self.firmRes)
-        self.processControlGridLayout.addWidget(self.b_firm_rest,1,0)
+        self.processControlGridLayout.addWidget(self.b_firm_rest,3,0)
         
         # button START BATCH
         self.b_start_batch = QPushButton("START BATCH")
         #self.b_start_batch.clicked.connect(self.startBatch)
-        self.processControlGridLayout.addWidget(self.b_start_batch)
+        self.processControlGridLayout.addWidget(self.b_start_batch,4,0)
 
         # button STOP BATCH
         self.b_stop_batch = QPushButton("STOP BATCH")
         #self.b_start_batch.clicked.connect(self.stopBatch)
-        self.processControlGridLayout.addWidget(self.b_stop_batch)
+        self.processControlGridLayout.addWidget(self.b_stop_batch,5,0)
     
         self.batchGroupBox.setLayout(self.processControlGridLayout)
 
@@ -69,11 +84,6 @@ class MainWindow(QDialog):
     def createManualGroupBox(self):
         self.manualControlGridLayout = QGridLayout()   
         self.manualGroupBox = QGroupBox("Manual XY-control")
-
-        # button MOVE - deprecated
-        self.b_goto_x = QPushButton("MOVE")
-        self.b_goto_x.clicked.connect(self.gotoX)
-        #self.manualControlGridLayout.addWidget(self.b_goto_x,0,0)
 
         # X position input field - deprecated
         self.x_pos = QLineEdit()
@@ -121,11 +131,27 @@ class MainWindow(QDialog):
         # logger screen
         self.log = QPlainTextEdit()
         self.log.setReadOnly(True)
+        
         self.logGridLayout.addWidget(self.log,0,0)
 
         self.logGroupBox.setLayout(self.logGridLayout)
 
         return self.logGroupBox
+
+    def createVideoWindow(self):
+        self.videoGridLayout = QGridLayout()
+        self.videoGroupBox = QGroupBox("Video stream")
+        
+        # logger screen
+        self.videoStream = QPlainTextEdit()
+        self.videoStream.setReadOnly(True)
+        self.videoGridLayout.addWidget(self.videoStream,0,0)
+
+        self.videoStream.appendPlainText("This will become a video stream widget.")
+
+        self.videoGroupBox.setLayout(self.videoGridLayout)
+
+        return self.videoGroupBox
     
     # button CONNECT / DISCONNECT
     def connectHandler(self):
@@ -139,16 +165,17 @@ class MainWindow(QDialog):
             self.PrintHAT_serial.disconnect()
             self.b_connect.setStyleSheet('QPushButton {background-color: #ff0000; border: none}')
             self.log.appendPlainText("Disconnected from port /tmp/printer")
-        #self.log.appendPlainText(str(self.readData()))
         return
         
     # button HOME X
     def homeX(self):
         if self.b_connect.isChecked():
             self.PrintHAT_serial.writeHomeX()
+            self.stepperX.setPosition(0)
         else:
             print("Please connect first with your serial port")
             self.log.appendPlainText("Please connect first with your serial port")
+
         self.log.appendPlainText(str(self.readData()))
         return
 
@@ -159,7 +186,8 @@ class MainWindow(QDialog):
             self.log.appendPlainText("Getting position...")
         else:
             self.log.appendPlainText("Please connect first with your serial port")
-            self.log.appendPlainText(str(self.readData()))
+        
+        self.log.appendPlainText(str(self.readData()))
         return
         
     # button FIRMWARE_RESTART
@@ -171,28 +199,57 @@ class MainWindow(QDialog):
         self.log.appendPlainText(str(self.readData()))
         return
 
-    def gotoX(self):
-        pos = self.x_pos.text()
+    def turnUp(self):
+        print("\nDEBUG: in function MainWindow::turnUp()")
+        pos = self.stepperY.getPosition()
+        pos += 1
+        self.stepperY.setPosition(pos)
+        self.PrintHAT_serial.writeGotoY(pos)
+        self.log.appendPlainText("Go to Y-coordinate " + str(pos))
+        self.log.appendPlainText(str(self.readData()))
+        return
+
+    def turnRight(self):
+        print("\nDEBUG: in function MainWindow::turnRight()")
+        pos = self.stepperX.getPosition()
+        pos += 1
+        self.stepperX.setPosition(pos)
         self.PrintHAT_serial.writeGotoX(pos)
         self.log.appendPlainText("Go to X-coordinate " + str(pos))
         self.log.appendPlainText(str(self.readData()))
         return
 
-    def turnUp(self):
-        print("in function turnUp()")
-        return
-
-    def turnRight(self):
-        print("in function turnRight()")
-        return
-
     def turnLeft(self):
-        print("in function turnLeft()")
+        print("\nDEBUG: in function MainWindow::turnLeft()")
+        pos = self.stepperX.getPosition()
+        if pos > 0:
+            pos -= 1
+        else:
+            self.log.appendPlainText("Moving out of range, current position: " + str(pos))
+        self.stepperX.setPosition(pos)
+        self.PrintHAT_serial.writeGotoX(pos)
+        self.log.appendPlainText("Go to X-coordinate " + str(pos))
+        self.log.appendPlainText(str(self.readData()))
         return
 
     def turnDown(self):
-        print("in function turnDown()")
+        print("\nDEBUG: in function MainWindow::turnDown()")
+        pos = self.stepperY.getPosition()
+        if pos > 0:
+            pos -= 1
+        else:
+            self.log.appendPlainText("Moving out of range, current Y-coordinate: " + str(pos))
+        self.stepperY.setPosition(pos)
+        self.PrintHAT_serial.writeGotoY(pos)
+        self.log.appendPlainText("Go to Y-coordinate " + str(pos))
+        self.log.appendPlainText(str(self.readData()))
         return
+    
+    def openIniFile(self):
+        iniFile = QFileDialog().getOpenFileName(self, "Choose file", "*.ini")
+        print(str(iniFile[0]))
+        return 
+  
     # button readData from port
     def readData(self):
         data = ""

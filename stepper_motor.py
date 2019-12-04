@@ -1,18 +1,11 @@
 class stepper:
     def __init__(self):
-        velocity = 0
-        position = 0
+        self.position = 0
         return
+    
+    def getPosition(self):
+        return self.position
 
-    def home(self):
-        print("\nDEBUG: in function stepper_motor::home")
+    def setPosition(self, pos):
+        self.position = pos
         return
-
-    def turnClockwise(self):
-        print("\nDEBUG: in function stepper_motor::turnClockwise")   
-        return
-
-    def turnCounterClockwise(self):
-        print("\nDEBUG: in function stepper_motor::turnCounterClockwise")   
-        return
-
