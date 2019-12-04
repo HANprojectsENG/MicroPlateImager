@@ -1,4 +1,4 @@
-class stepper:
+class Stepper_Control:
     def __init__(self):
         self.position = 0
         return

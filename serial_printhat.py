@@ -3,14 +3,21 @@ import serial
 
 from PySide2.QtWidgets import *
 
-class ser_comm:
-    connectionState = 0
+class Serial_Communication:
+    connectionState = False
 
     def __init__(self, parent=None):
         super().__init__()
         # make sure klipper service is active
         os.system('sudo service klipper restart')
-        
+
+    def getConnectionState(self)    :
+        return self.connectionState
+
+    def setConnectionState(self, conState):
+        self.connectionState = conState
+        return
+
     def connect(self, port):
         print("\nDEBUG: in function ser_comm::connect(port)")
         
@@ -22,7 +29,7 @@ class ser_comm:
                 print("\nERROR: Cannot connect to device on port {}".format(port))
             else:
                 print("\nDEBUG: Opened serial communication on port {}".format(port))
-                self.connectionState = 1
+                self.setConnectionState(True)
 
         except Exception as e:
             print("Exception in Ser_comm::connect(self, port)", e)
@@ -74,7 +81,7 @@ class ser_comm:
 
     def disconnect(self):
         print("\nDEBUG: in function ser_comm::disconnect()")
-        if self.connectionState == 1:
+        if self.getConnectionState():
             self.serial.close()
         else:
             print("No connection to be closed\n")
