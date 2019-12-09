@@ -10,11 +10,7 @@ from PySide2.QtCore import QSettings
 class MainWindow(QDialog):
 
     # create serial instance used for writing G-code
-    PrintHAT_serial = serial_printhat.GcodeHandler()
-
-    # create stepper instances
-    stepper_X = stepper.Stepper_Control()
-    stepper_Y = stepper.Stepper_Control()
+    PrintHAT_serial = serial_printhat.GcodeSerial()
 
     settings = None
     settings_batch = None
@@ -52,32 +48,6 @@ class MainWindow(QDialog):
         self.batchGroupBox = QGroupBox("Batch control")
         self.batchGroupBox.setStyleSheet("color: #000000;")
 
-        # button open settings init file
-        self.b_settings_file = QPushButton("Open settings file")
-        #self.b_settings_file.clicked.connect(self.openSettingsIniFile)
-        #self.b_settings_file.setStyleSheet("background-color: #AAAAAA; border: none")
-        self.processControlGridLayout.addWidget(self.b_settings_file)
-
-        # open batch init file
-        self.b_batch_file = QPushButton("Open batch file")
-        self.b_batch_file.clicked.connect(self.openBatchIniFile)
-        #self.b_batch_file.setStyleSheet("background-color: #AAAAAA; border: none")
-        self.processControlGridLayout.addWidget(self.b_batch_file)
-
-        # button CONNECT
-        self.b_connect = QPushButton("DISCONNECTED")
-        self.b_connect.setStyleSheet('QPushButton {background-color: #ff0000; border: none}')
-        self.b_connect.setCheckable(True)
-        self.b_connect.setChecked(True)
-        self.b_connect.toggle()
-        self.b_connect.clicked.connect(self.connectHandler)
-        self.processControlGridLayout.addWidget(self.b_connect,2,0)
-
-        # button FIRMWARE_RESET
-        self.b_firm_rest = QPushButton("FIRMWARE_RESTART")
-        self.b_firm_rest.clicked.connect(self.firmRes)
-        self.processControlGridLayout.addWidget(self.b_firm_rest,3,0)
-        
         # button START BATCH
         self.b_start_batch = QPushButton("START BATCH")
         #self.b_start_batch.clicked.connect(self.startBatch)
@@ -85,7 +55,7 @@ class MainWindow(QDialog):
 
         # button STOP BATCH
         self.b_stop_batch = QPushButton("STOP BATCH")
-        #self.b_start_batch.clicked.connect(self.stopBatch)
+        #self.b_stop_batch.clicked.connect(self.stopBatch)
         self.processControlGridLayout.addWidget(self.b_stop_batch,5,0)
     
         self.batchGroupBox.setLayout(self.processControlGridLayout)
@@ -104,32 +74,32 @@ class MainWindow(QDialog):
 
         # button HOME X
         self.b_home_x = QPushButton("HOME X")
-        self.b_home_x.clicked.connect(self.homeX)
+        #self.b_home_x.clicked.connect(self.homeX)
         self.manualControlGridLayout.addWidget(self.b_home_x,0,0,1,2)
 
         # button GET_POSITION
         self.b_get_pos = QPushButton("GET_POSITION")
-        self.b_get_pos.clicked.connect(self.getPos)
+        #self.b_get_pos.clicked.connect(self.getPos)
         self.manualControlGridLayout.addWidget(self.b_get_pos,1,0,1,2)
         
         # button TURN UP
         self.b_turn_up = QPushButton("^")
-        self.b_turn_up.clicked.connect(self.turnUp)
+        #self.b_turn_up.clicked.connect(self.turnUp)
         self.manualControlGridLayout.addWidget(self.b_turn_up,2,0,1,2)
 
         # button TURN LEFT
         self.b_turn_left = QPushButton("<")
-        self.b_turn_left.clicked.connect(self.turnLeft)
+        #self.b_turn_left.clicked.connect(self.turnLeft)
         self.manualControlGridLayout.addWidget(self.b_turn_left,3,0)
 
         # button TURN RIGHT
         self.b_turn_right = QPushButton(">")
-        self.b_turn_right.clicked.connect(self.turnRight)
+        #self.b_turn_right.clicked.connect(self.turnRight)
         self.manualControlGridLayout.addWidget(self.b_turn_right,3,1)
 
         # button TURN DOWN
         self.b_turn_down = QPushButton("v")
-        self.b_turn_down.clicked.connect(self.turnDown)
+        #self.b_turn_down.clicked.connect(self.turnDown)
         self.manualControlGridLayout.addWidget(self.b_turn_down,4,0,1,2)
         
         self.manualGroupBox.setLayout(self.manualControlGridLayout)
@@ -167,7 +137,20 @@ class MainWindow(QDialog):
         self.videoGroupBox.setLayout(self.videoGridLayout)
 
         return self.videoGroupBox
-    
+
+    def openSettingsIniFile(self):
+        print("\nDEBUG: in function MainWindow::openSettingsIniFile()")
+        self.settings = QSettings(os.path.dirname(os.path.realpath(__file__)) + "/settings.ini",  QSettings.IniFormat)
+        self.log.appendPlainText("Opened settingsfile: " + os.path.dirname(os.path.realpath(__file__)) + "/settings.ini\n")
+        return 
+
+    def openBatchIniFile(self):
+        print("\nDEBUG: in function MainWindow::openBatchIniFile()")
+        self.settings_batch = QSettings(os.path.dirname(os.path.realpath(__file__)) + "/batch.ini",  QSettings.IniFormat)
+        self.log.appendPlainText("Opened batch file: " + os.path.dirname(os.path.realpath(__file__)) + "/batch.ini\n")
+        return 
+
+class depricatedFunctions:    
     # button CONNECT / DISCONNECT
     def connectHandler(self):
         if self.b_connect.isChecked():
@@ -274,44 +257,39 @@ class MainWindow(QDialog):
             self.log.appendPlainText("Please connect first with your serial port")
         return
     
-    def openSettingsIniFile(self):
-        print("\nDEBUG: in function MainWindow::openSettingsIniFile()")
-        self.settings = QSettings(os.path.dirname(os.path.realpath(__file__)) + "/settings.ini",  QSettings.IniFormat)
-        self.log.appendPlainText("Opened settingsfile: " + os.path.dirname(os.path.realpath(__file__)) + "/settings.ini\n")
-        return 
-
-    def openBatchIniFile(self):
-        print("\nDEBUG: in function MainWindow::openBatchIniFile()")
-        self.settings_batch = QSettings(os.path.dirname(os.path.realpath(__file__)) + "/batch.ini",  QSettings.IniFormat)
-        self.log.appendPlainText("Opened batch file: " + os.path.dirname(os.path.realpath(__file__)) + "/batch.ini\n")
-        return 
-
     # button readData from port
     def readData(self):
         data = ""
         if self.b_connect.isChecked():
             data = self.PrintHAT_serial.readPort()
         else:
-            print("You try to read data while port is not connected")
+            self.log.appendPlainText("You try to read data while port is not connected")
         return data
     
-    def disconnectFromPortAtExit(self):
-        self.log.appendPlainText("Disconnecting from port")
-        self.PrintHAT_serial.disconnect()
-        return
-    
-
-
 ################ MAIN APPLICATION ################
+if __name__ == '__main__':
+    # Instantiate MainWindow and app
+    app = QApplication([])
+    mwi = MainWindow()
+    mwi.show()
 
-# Instantiate MainWindow and app
-app = QApplication([])
-mwi = MainWindow()
-mwi.show()
+    # Connect to printhat virtual port (this links the klipper software also)
+    mwi.PrintHAT_serial.connect("/tmp/printer")
 
-# Signal slot connections
-mwi.b_settings_file.clicked.connect(mwi.openSettingsIniFile)
-
-ret = app.exec_()
-mwi.disconnectFromPortAtExit()
-sys.exit(ret)
+    # create stepper instances
+    stepper_X = stepper.StepperControl()
+    stepper_Y = stepper.StepperControl()
+    stepper_well_positioning = stepper.StepperWellpositioning(stepper_X, stepper_Y, mwi.PrintHAT_serial)
+    
+    # Signal slot connections
+    #mwi.b_start_batch.clicked.connect(mwi.startBatch)
+    #mwi.b_stop_batch.clicked.connect(mwi.stopBatch)
+    mwi.b_home_x.clicked.connect(stepper_well_positioning.homeX)
+    mwi.b_get_pos.clicked.connect(stepper_well_positioning.getPosition)
+    #mwi.b_turn_up.clicked.connect(mwi.turnUp)
+    mwi.b_turn_left.clicked.connect(stepper_well_positioning.turnLeft)
+    #mwi.b_turn_right.clicked.connect(mwi.turnRight)
+    #mwi.b_turn_down.clicked.connect(mwi.turnDown)
+    ret = app.exec_()
+    mwi.PrintHAT_serial.disconnect()
+    sys.exit(ret)

@@ -3,14 +3,24 @@ import serial
 
 from PySide2.QtWidgets import *
 
-class Serial_Communication:
+class GcodeSerial:
+    ins = 0 # static instance counter, may not exceed 1
     connectionState = False
-
-    def __init__(self, parent=None):
+    
+    def __init__(self):#, parent=None):
         super().__init__()
+        
+        # if already an instance exist
+        if GcodeSerial.ins >= 1:
+            del self
+            print("ERROR: you create multiple instances of " + __class__.__name__ + " while only 1 instance is allowed")
+            return
+        
+        GcodeSerial.ins+=1
+        
         # make sure klipper service is active
         os.system('sudo service klipper restart')
-
+        
     def getConnectionState(self)    :
         return self.connectionState
 
@@ -23,32 +33,23 @@ class Serial_Communication:
         
         try:
             # open the serial port
-            self.serial = serial.Serial(port, timeout=1)
+            self.serial = serial.Serial(port, timeout=3.0)
 
             if not self.serial.is_open:
                 print("\nERROR: Cannot connect to device on port {}".format(port))
             else:
                 print("\nDEBUG: Opened serial communication on port {}".format(port))
                 self.setConnectionState(True)
-
         except Exception as e:
             print("Exception in Ser_comm::connect(self, port)", e)
-            
         return
     
-    def writeFirmwareRestart(self):
-        print("\nDEBUG: in function ser_comm::writeFirmwareRestart()")
-        self.serial.write(b'FIRMWARE_RESTART\r\n')
-        return
-
-    def writeHomeX(self):
-        print("\nDEBUG: in function ser_com::writeHomeX()")
-        self.serial.write(b'G28 X0\r\n')
-        return
-
-    def writeGetPosition(self):
-        print("\nDEBUG: in function ser_com::writeGetPosition()")
-        self.serial.write(b'M114\r\n')
+    def executeGcode(self, gcode_string):
+        try:
+            gcode_byte_array = bytearray(gcode_string, 'utf-8')
+            self.serial.write(gcode_byte_array)
+        except Exception as e:
+            print("Exception in Ser_comm::executeGode(self, gcode_string)", e)
         return
 
     # @TODO: fuse writeGotoX with writeGotoY in one G0 X<pos> Y<pos> F<velocity> command
