@@ -10,7 +10,7 @@ from PySide2.QtCore import QSettings
 class MainWindow(QDialog):
 
     # create serial instance used for writing G-code
-    PrintHAT_serial = serial_printhat.Serial_Communication()
+    PrintHAT_serial = serial_printhat.GcodeHandler()
 
     # create stepper instances
     stepper_X = stepper.Stepper_Control()
@@ -284,7 +284,6 @@ class MainWindow(QDialog):
         print("\nDEBUG: in function MainWindow::openBatchIniFile()")
         self.settings_batch = QSettings(os.path.dirname(os.path.realpath(__file__)) + "/batch.ini",  QSettings.IniFormat)
         self.log.appendPlainText("Opened batch file: " + os.path.dirname(os.path.realpath(__file__)) + "/batch.ini\n")
-        print("hello" + str(self.settings_batch.value("System/Operator")))
         return 
 
     # button readData from port
