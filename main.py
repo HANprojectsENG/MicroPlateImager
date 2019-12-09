@@ -1,3 +1,4 @@
+import os
 import sys
 import serial_printhat
 import stepper
@@ -18,7 +19,7 @@ class MainWindow(QDialog):
     settings = None
     settings_batch = None
 
-    def __init__(self, parent=None):
+    def __init__(self):
         super().__init__()
         
         self.mainWindowLayout = QGridLayout()    
@@ -42,7 +43,6 @@ class MainWindow(QDialog):
         self.mainWindowLayout.addWidget(lgb,1,1)
 
         self.setWindowTitle("PrintHAT")
-        #self.setStyleSheet("background-color:#eeeeee;")
         self.setLayout(self.mainWindowLayout)
         self.resize(self.width(), self.height())
 
@@ -54,7 +54,7 @@ class MainWindow(QDialog):
 
         # button open settings init file
         self.b_settings_file = QPushButton("Open settings file")
-        self.b_settings_file.clicked.connect(self.openSettingsIniFile)
+        #self.b_settings_file.clicked.connect(self.openSettingsIniFile)
         #self.b_settings_file.setStyleSheet("background-color: #AAAAAA; border: none")
         self.processControlGridLayout.addWidget(self.b_settings_file)
 
@@ -276,16 +276,15 @@ class MainWindow(QDialog):
     
     def openSettingsIniFile(self):
         print("\nDEBUG: in function MainWindow::openSettingsIniFile()")
-        iniFile = QFileDialog().getOpenFileName(self, "Choose settings file", "*.ini")
-        self.settings = QSettings(iniFile[0],  QSettings.IniFormat)
-        self.log.appendPlainText("\nYou selected file: " + str(iniFile[0]))
+        self.settings = QSettings(os.path.dirname(os.path.realpath(__file__)) + "/settings.ini",  QSettings.IniFormat)
+        self.log.appendPlainText("Opened settingsfile: " + os.path.dirname(os.path.realpath(__file__)) + "/settings.ini\n")
         return 
 
     def openBatchIniFile(self):
         print("\nDEBUG: in function MainWindow::openBatchIniFile()")
-        iniFile = QFileDialog().getOpenFileName(self, "Choose batch file", "INI-files (*.ini)")
-        self.settings_batch = QSettings(iniFile[0],  QSettings.IniFormat)
-        self.log.appendPlainText("\nYou selected file: " + str(iniFile[0]))
+        self.settings_batch = QSettings(os.path.dirname(os.path.realpath(__file__)) + "/batch.ini",  QSettings.IniFormat)
+        self.log.appendPlainText("Opened batch file: " + os.path.dirname(os.path.realpath(__file__)) + "/batch.ini\n")
+        print("hello" + str(self.settings_batch.value("System/Operator")))
         return 
 
     # button readData from port
@@ -303,12 +302,17 @@ class MainWindow(QDialog):
         return
     
 
-##################################################
+
 ################ MAIN APPLICATION ################
-##################################################
+
+# Instantiate MainWindow and app
 app = QApplication([])
 mwi = MainWindow()
 mwi.show()
+
+# Signal slot connections
+mwi.b_settings_file.clicked.connect(mwi.openSettingsIniFile)
+
 ret = app.exec_()
 mwi.disconnectFromPortAtExit()
 sys.exit(ret)
