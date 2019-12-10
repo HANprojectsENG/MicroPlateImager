@@ -1,13 +1,16 @@
 import os
 import sys
+import time
 import serial_printhat
 import stepper
 
 from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit, QFileDialog
 from PySide2.QtGui import QFont
-from PySide2.QtCore import QSettings
+from PySide2.QtCore import QSettings, Signal, Slot
 
 class MainWindow(QDialog):
+
+    message = Signal(str) # message signal
 
     # create serial instance used for writing G-code
     PrintHAT_serial = serial_printhat.GcodeSerial()
@@ -99,19 +102,15 @@ class MainWindow(QDialog):
         self.x_pos.setFont(QFont("Arial",20))
         self.manualControlGridLayout.addWidget(self.x_pos,5,0)
 
-        # button goto X
-        self.b_gotoX = QPushButton()
-        self.manualControlGridLayout.addWidget(self.b_gotoX,5,1)
-
         # Y position input field
         self.y_pos = QLineEdit()
         self.y_pos.setText('0.00')
         self.y_pos.setFont(QFont("Arial",20))
-        self.manualControlGridLayout.addWidget(self.y_pos,6,0)
+        self.manualControlGridLayout.addWidget(self.y_pos,5,1)
 
-        # button goto Y
-        self.b_gotoY = QPushButton()
-        self.manualControlGridLayout.addWidget(self.b_gotoY,6,1)
+        # button goto X
+        self.b_gotoXY = QPushButton("Goto XY")
+        self.manualControlGridLayout.addWidget(self.b_gotoXY,6,0,1,2)
 
         # button Emergency break
         self.b_emergency_break = QPushButton("Emergency break")
@@ -153,6 +152,11 @@ class MainWindow(QDialog):
 
         return self.videoGroupBox
 
+    @Slot(str)
+    def LogWindowInsert(self, message):
+        self.log.appendPlainText("it works: " +str(message) + "\n")
+        return
+
     def openSettingsIniFile(self):
         print("\nDEBUG: in function MainWindow::openSettingsIniFile()")
         self.settings = QSettings(os.path.dirname(os.path.realpath(__file__)) + "/settings.ini",  QSettings.IniFormat)
@@ -166,112 +170,6 @@ class MainWindow(QDialog):
         return 
 
 class depricatedFunctions:    
-    # button CONNECT / DISCONNECT
-    def connectHandler(self):
-        if self.b_connect.isChecked():
-            self.b_connect.setText("CONNECTED")
-            self.PrintHAT_serial.connect("/tmp/printer")
-            self.b_connect.setStyleSheet('QPushButton {background-color: #00ff00; border: none}')
-            self.log.appendPlainText("Connected to port /tmp/printer")
-        else:
-            self.b_connect.setText("DISCONNECTED")
-            self.PrintHAT_serial.disconnect()
-            self.b_connect.setStyleSheet('QPushButton {background-color: #ff0000; border: none}')
-            self.log.appendPlainText("Disconnected from port /tmp/printer")
-        return
-        
-    # button HOME X
-    # @TODO: update function with homeXYZ functionality
-    def homeX(self):
-        if self.b_connect.isChecked():
-            self.PrintHAT_serial.writeHomeX()
-            self.stepper_X.setPosition(0)
-        else:
-            self.log.appendPlainText("Please connect first with your serial port")
-
-        self.log.appendPlainText(str(self.readData()))
-        return
-
-    # button GET_POSITION
-    def getPos(self):
-        if self.b_connect.isChecked():
-            self.PrintHAT_serial.writeGetPosition()
-            self.log.appendPlainText("Getting position...")
-        else:
-            self.log.appendPlainText("Please connect first with your serial port")
-        
-        self.log.appendPlainText(str(self.readData()))
-        return
-        
-    # button FIRMWARE_RESTART
-    def firmRes(self):
-        if self.b_connect.isChecked():
-            self.PrintHAT_serial.writeFirmwareRestart()
-        else:
-            self.log.appendPlainText("Please connect first with your serial port")
-        self.log.appendPlainText(str(self.readData()))
-        return
-
-    def turnUp(self):
-        print("\nDEBUG: in function MainWindow::turnUp()")
-        if self.PrintHAT_serial.getConnectionState():
-            pos = self.stepper_Y.getPosition()
-            pos += 1
-            self.stepper_Y.setPosition(pos)
-            self.PrintHAT_serial.writeGotoY(pos)
-            self.log.appendPlainText("Go to Y-coordinate " + str(pos))
-            self.log.appendPlainText(str(self.readData()))
-        else:
-            self.log.appendPlainText("Please connect first with your serial port")
-        return
-
-    def turnRight(self):
-        print("\nDEBUG: in function MainWindow::turnRight()")
-        if self.PrintHAT_serial.getConnectionState():
-            pos = self.stepper_X.getPosition()
-            pos += 1
-            self.stepper_X.setPosition(pos)
-            self.PrintHAT_serial.writeGotoX(pos)
-            self.log.appendPlainText("Go to X-coordinate " + str(pos))
-            self.log.appendPlainText(str(self.readData()))
-        else:
-            self.log.appendPlainText("Please connect first with your serial port")
-        return
-
-    def turnLeft(self):
-        print("\nDEBUG: in function MainWindow::turnLeft()")
-        if self.PrintHAT_serial.getConnectionState():
-            pos = self.stepper_X.getPosition()
-            if pos > 0:
-                pos -= 1
-            else:
-                self.log.appendPlainText("Moving out of range, current position: " + str(pos))
-
-            self.stepper_X.setPosition(pos)
-            self.PrintHAT_serial.writeGotoX(pos)
-            self.log.appendPlainText("Go to X-coordinate " + str(pos))
-            self.log.appendPlainText(str(self.readData()))
-        else:
-            self.log.appendPlainText("Please connect first with your serial port")
-        return
-
-    def turnDown(self):
-        print("\nDEBUG: in function MainWindow::turnDown()")
-        if self.PrintHAT_serial.getConnectionState():
-            pos = self.stepper_Y.getPosition()
-            if pos > 0:
-                pos -= 1
-            else:
-                self.log.appendPlainText("Moving out of range, current Y-coordinate: " + str(pos))
-
-            self.stepper_Y.setPosition(pos)
-            self.PrintHAT_serial.writeGotoY(pos)
-            self.log.appendPlainText("Go to Y-coordinate " + str(pos))
-            self.log.appendPlainText(str(self.readData()))
-        else:
-            self.log.appendPlainText("Please connect first with your serial port")
-        return
-    
     # button readData from port
     def readData(self):
         data = ""
@@ -308,9 +206,14 @@ if __name__ == '__main__':
     mwi.b_turn_left.clicked.connect(stepper_well_positioning.turnLeft)
     mwi.b_turn_right.clicked.connect(stepper_well_positioning.turnRight)
     mwi.b_turn_down.clicked.connect(stepper_well_positioning.turnDown)
-    mwi.b_turn_down.clicked.connect(stepper_well_positioning.emergencyBreak)
-    mwi.b_gotoX.clicked.connect(lambda: stepper_well_positioning.gotoX(mwi.x_pos.text()))
+    mwi.b_gotoXY.clicked.connect(lambda: stepper_well_positioning.gotoXY(mwi.x_pos.text(), mwi.y_pos.text()))
+    mwi.b_emergency_break.clicked.connect(stepper_well_positioning.emergencyBreak)
+    mwi.message.connect(mwi.LogWindowInsert)
+    mwi.message.emit("creating batchgroupbox")
+    #stepper_X.message.connect(mwi.LogWindowInsert)
+    #stepper_Y.message.connect(mwi.LogWindowInsert)
+    stepper_well_positioning.message.sig.connect(mwi.LogWindowInsert)
 
     ret = app.exec_()
-    mwi.PrintHAT_serial.disconnect()
+    mwi.PrintHAT_serial.disconnect() # stops the motors and disconnects from pseudo serial link /tmp/printer
     sys.exit(ret)

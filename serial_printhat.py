@@ -82,6 +82,7 @@ class GcodeSerial:
 
     def disconnect(self):
         print("\nDEBUG: in function ser_comm::disconnect()")
+        self.serial.write(b"M18\r\n")
         if self.getConnectionState():
             self.serial.close()
         else:
