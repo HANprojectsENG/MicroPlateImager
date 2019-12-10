@@ -48,15 +48,17 @@ class MainWindow(QDialog):
         self.batchGroupBox = QGroupBox("Batch control")
         self.batchGroupBox.setStyleSheet("color: #000000;")
 
+        # button FIRMWARE_RESTART
+        self.b_firmware_restart = QPushButton("FIRMWARE_RESTART")
+        self.processControlGridLayout.addWidget(self.b_firmware_restart,0,0)
+
         # button START BATCH
         self.b_start_batch = QPushButton("START BATCH")
-        #self.b_start_batch.clicked.connect(self.startBatch)
-        self.processControlGridLayout.addWidget(self.b_start_batch,4,0)
+        self.processControlGridLayout.addWidget(self.b_start_batch,1,0)
 
         # button STOP BATCH
         self.b_stop_batch = QPushButton("STOP BATCH")
-        #self.b_stop_batch.clicked.connect(self.stopBatch)
-        self.processControlGridLayout.addWidget(self.b_stop_batch,5,0)
+        self.processControlGridLayout.addWidget(self.b_stop_batch,2,0)
     
         self.batchGroupBox.setLayout(self.processControlGridLayout)
 
@@ -67,40 +69,53 @@ class MainWindow(QDialog):
         self.manualGroupBox = QGroupBox("Manual XY-control")
         self.manualGroupBox.setStyleSheet("color: #000000;")
 
-        # X position input field - deprecated
-        self.x_pos = QLineEdit()
-        self.x_pos.setFont(QFont("Arial",20))
-        #self.manualControlGridLayout.addWidget(self.x_pos,0,1)
-
         # button HOME X
-        self.b_home_x = QPushButton("HOME X")
-        #self.b_home_x.clicked.connect(self.homeX)
+        self.b_home_x = QPushButton("HOME X0 Y0")
         self.manualControlGridLayout.addWidget(self.b_home_x,0,0,1,2)
 
         # button GET_POSITION
         self.b_get_pos = QPushButton("GET_POSITION")
-        #self.b_get_pos.clicked.connect(self.getPos)
         self.manualControlGridLayout.addWidget(self.b_get_pos,1,0,1,2)
         
         # button TURN UP
         self.b_turn_up = QPushButton("^")
-        #self.b_turn_up.clicked.connect(self.turnUp)
         self.manualControlGridLayout.addWidget(self.b_turn_up,2,0,1,2)
 
         # button TURN LEFT
         self.b_turn_left = QPushButton("<")
-        #self.b_turn_left.clicked.connect(self.turnLeft)
-        self.manualControlGridLayout.addWidget(self.b_turn_left,3,0)
+        self.manualControlGridLayout.addWidget(self.b_turn_left,3,0,1,1)
 
         # button TURN RIGHT
         self.b_turn_right = QPushButton(">")
-        #self.b_turn_right.clicked.connect(self.turnRight)
-        self.manualControlGridLayout.addWidget(self.b_turn_right,3,1)
+        self.manualControlGridLayout.addWidget(self.b_turn_right,3,1,1,1)
 
         # button TURN DOWN
         self.b_turn_down = QPushButton("v")
-        #self.b_turn_down.clicked.connect(self.turnDown)
         self.manualControlGridLayout.addWidget(self.b_turn_down,4,0,1,2)
+
+        # X position input field
+        self.x_pos = QLineEdit()
+        self.x_pos.setText('0.00')
+        self.x_pos.setFont(QFont("Arial",20))
+        self.manualControlGridLayout.addWidget(self.x_pos,5,0)
+
+        # button goto X
+        self.b_gotoX = QPushButton()
+        self.manualControlGridLayout.addWidget(self.b_gotoX,5,1)
+
+        # Y position input field
+        self.y_pos = QLineEdit()
+        self.y_pos.setText('0.00')
+        self.y_pos.setFont(QFont("Arial",20))
+        self.manualControlGridLayout.addWidget(self.y_pos,6,0)
+
+        # button goto Y
+        self.b_gotoY = QPushButton()
+        self.manualControlGridLayout.addWidget(self.b_gotoY,6,1)
+
+        # button Emergency break
+        self.b_emergency_break = QPushButton("Emergency break")
+        self.manualControlGridLayout.addWidget(self.b_emergency_break,7,0,1,2)
         
         self.manualGroupBox.setLayout(self.manualControlGridLayout)
         
@@ -282,14 +297,20 @@ if __name__ == '__main__':
     stepper_well_positioning = stepper.StepperWellpositioning(stepper_X, stepper_Y, mwi.PrintHAT_serial)
     
     # Signal slot connections
+    mwi.b_firmware_restart.clicked.connect(stepper_well_positioning.firmwareRestart)
+
     #mwi.b_start_batch.clicked.connect(mwi.startBatch)
     #mwi.b_stop_batch.clicked.connect(mwi.stopBatch)
+    
     mwi.b_home_x.clicked.connect(stepper_well_positioning.homeX)
     mwi.b_get_pos.clicked.connect(stepper_well_positioning.getPosition)
-    #mwi.b_turn_up.clicked.connect(mwi.turnUp)
+    mwi.b_turn_up.clicked.connect(stepper_well_positioning.turnUp)
     mwi.b_turn_left.clicked.connect(stepper_well_positioning.turnLeft)
-    #mwi.b_turn_right.clicked.connect(mwi.turnRight)
-    #mwi.b_turn_down.clicked.connect(mwi.turnDown)
+    mwi.b_turn_right.clicked.connect(stepper_well_positioning.turnRight)
+    mwi.b_turn_down.clicked.connect(stepper_well_positioning.turnDown)
+    mwi.b_turn_down.clicked.connect(stepper_well_positioning.emergencyBreak)
+    mwi.b_gotoX.clicked.connect(lambda: stepper_well_positioning.gotoX(mwi.x_pos.text()))
+
     ret = app.exec_()
     mwi.PrintHAT_serial.disconnect()
     sys.exit(ret)
