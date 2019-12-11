@@ -1,0 +1,16 @@
+/*!
+
+\mainpage Documentation mainpage
+\section about About Wellplate reader
+Nowadays novel (antimicrobial) medicines are required to treat infections and other diseases. To discover new drugs, millions of experiments have to be done to be able to select useful compounds. For that reason, researchers rely on high-throughput screening, which is a method for automated experimentation using robotics, detectors and cameras, as well as data processing/control software.
+
+The HAN Biocentre and HAN Engineering have been working on a screening system for a number of years. The basis of the HAN high-throughput screening (HTS) system is a custom-built plate reader, which uses open-source components frequently being used in 3D printers, as well as 3D-printed components. In our vision, piggybacking on the wave of open-source tools available today, will help to create reusable systems that can also be easily configured to new experiments or environments. Basically, plate readers are instruments deployed to detect biological, chemical or physical events of samples in a microwell (or multi-well) plate, i.e. a flat plate with multiple "wells" used as small test tubes. Our system films these wells over prolonged periods and attempts to draw conclusions on these videos using image and data processing algorithms. In each of the wells, a biological experiment is conducted, and frequently it is important to control basic environmental parameters, such as temperature and humidity.
+<br>
+
+\section team
+<p>
+HAN BioCentre and HAN Engineering\n
+</p>
+
+*/
+
