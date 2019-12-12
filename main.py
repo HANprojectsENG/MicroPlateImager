@@ -18,7 +18,8 @@ from PySide2.QtCore import QSettings, Signal, Slot
 class MainWindow(QDialog):
     message = Signal(str) # message signal
 
-    ## Create serial instance used for writing G-code
+    ## @param Create serial instance used for writing G-code.
+    # @todo Check if PrintHAT_serial can be declared in the main application.
     PrintHAT_serial = serial_printhat.GcodeSerial()
 
     settings = None
@@ -30,16 +31,16 @@ class MainWindow(QDialog):
         
         self.mainWindowLayout = QGridLayout()    
            
-        ## Create groupbox with manual control widgets
+        ## @param mgb is a groupbox with manual control widgets
         mgb = self.createManualGroupBox()
 
-        ## Create groupbox with batch process control widgets
+        ## @param is a groupbox with batch process control widgets
         bgb = self.createBatchGroupBox()
-        
-        ## Create groupbox with log window
+
+        ## @param is a groupbox with log window
         lgb = self.createLogWindow()
 
-        ## Create groupbox with video stream window
+        ## @param is a groupbox with video stream window
         vgb = self.createVideoWindow()
 
         ## Fill mainWindowLayout with the just created groupboxes in the mainWindowLayout gridlayout
@@ -53,6 +54,7 @@ class MainWindow(QDialog):
         self.resize(self.width(), self.height())
 
     ## @brief MainWindow::createBatchGroupBox(self) creates the groupbox and the widgets in it which are used for the batch control.
+    # @return self.batchGroupBox. This is the groupbox containing the Batch process widgets.
     def createBatchGroupBox(self):
         self.processControlGridLayout = QGridLayout()        
 
@@ -76,6 +78,7 @@ class MainWindow(QDialog):
         return self.batchGroupBox
 
     ## @brief MainWindow::createManualGroupBox(self) creates the groupbox and the widgets in it which are used for the manual motor control.
+    # @return self.manualGroupBox. This is the groupbox containing the manual control process widgets.
     def createManualGroupBox(self):
         self.manualControlGridLayout = QGridLayout()   
         self.manualGroupBox = QGroupBox("Manual XY-control")
@@ -128,7 +131,9 @@ class MainWindow(QDialog):
         self.manualGroupBox.setLayout(self.manualControlGridLayout)
         
         return self.manualGroupBox
+    
     ## @brief MainWindow::createLogWindow(self) creates the groupbox and the log widget in it which is used for displaying debug messages.
+    # @return self.logGroupBox. This is the groupbox containing the Log window widgets.
     def createLogWindow(self):
         self.logGridLayout = QGridLayout()
         self.logGroupBox = QGroupBox("Logger")
@@ -145,6 +150,7 @@ class MainWindow(QDialog):
         return self.logGroupBox
 
     ## @brief MainWindow::createVideoGroupBox(self) creates the groupbox and the widgets in it which are used for displaying vido widgets.
+    # @return self.videoGroupBox. This the groupbox containing the snapshot visualisation widgets.
     def createVideoWindow(self):
         self.videoGridLayout = QGridLayout()
         self.videoGroupBox = QGroupBox("Video stream")
@@ -182,18 +188,6 @@ class MainWindow(QDialog):
         self.settings_batch = QSettings(os.path.dirname(os.path.realpath(__file__)) + "/batch.ini",  QSettings.IniFormat)
         self.log.appendPlainText("Opened batch file: " + os.path.dirname(os.path.realpath(__file__)) + "/batch.ini\n")
         return 
-
-## @brief class depricatedFunctions contains functions which are used as backup during software developing. None of these functions are in use anymore.
-#  @depricated depricatedFunctions::readData(self)
-class depricatedFunctions:    
-    ## @brief button readData from port
-    def readData(self):
-        data = ""
-        if self.b_connect.isChecked():
-            data = self.PrintHAT_serial.readPort()
-        else:
-            self.log.appendPlainText("You try to read data while port is not connected")
-        return data
     
 ################################ MAIN APPLICATION ################################
 ## @brief main application of the well plate reader system. Instantiates the MainWindow().
@@ -203,15 +197,20 @@ class depricatedFunctions:
 if __name__ == '__main__':
     ## Instantiate MainWindow and app
     app = QApplication([])
+    ## @param mwi is the MainWindow application.
     mwi = MainWindow()
     mwi.show()
 
-    ## Connect to printhat virtual port (this links the klipper software also)
+    ## Connect to printhat virtual port (this links the klipper software also).
     mwi.PrintHAT_serial.connect("/tmp/printer")
 
-    ## create stepper instances
+    ## @param stepper_X is the X-axis stepper motor.
     stepper_X = stepper.StepperControl()
+    
+    ## @param stepper_Y is the Y-axis stepper motor.
     stepper_Y = stepper.StepperControl()
+    
+    ## @param stepper_well_positioning is the positioning instance of the wells.
     stepper_well_positioning = stepper.StepperWellpositioning(stepper_X, stepper_Y, mwi.PrintHAT_serial)
     
     ## Signal slot connections
