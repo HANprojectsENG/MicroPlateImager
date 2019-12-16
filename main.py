@@ -1,5 +1,5 @@
 ## @package main.py
-# @brief main.py instantiates a main window. It handles message signals for logging. It connects to the PrintHAT pseudo serial port (/tmp/printer). It connects (window widget) signals to their slots and finally it disconnects from the port at exit.
+## @brief main.py instantiates a main window. It handles message signals for logging. It connects to the PrintHAT pseudo serial port (/tmp/printer). It connects (window widget) signals to their slots and finally it disconnects from the port at exit.
 
 import os
 import sys
@@ -13,9 +13,9 @@ from PySide2.QtGui import QFont
 from PySide2.QtCore import QSettings, Signal, Slot
 
 ## @brief MainWindow(QDialog) instantiates a main window. It consists of a manual control groupbox in which the user can control the steppers of the plate reader manually. Furthermore a groupbox with batch control widgets is created. A groupbox with log window provides runtime debug information. A groupbox with a camerastream widget shows the snapshots created by the well.
-# @param QDialog is used as the window is a user interactive GUI.
-# @todo Creation of signal messages for the log window.
-# @todo Creation of the snapshot stream.
+## @param QDialog is used as the window is a user interactive GUI.
+## @todo Creation of signal messages for the log window.
+## @todo Creation of the snapshot stream.
 class MainWindow(QDialog):
     message = signal.signalClass() # message signal
 
@@ -51,7 +51,7 @@ class MainWindow(QDialog):
         self.resize(self.width(), self.height())
 
     ## @brief Mainwindow(QDialog)::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
-    # @param message is the string message to be emitted.
+    ## @param message is the string message to be emitted.
     def msg(self, message):
         if message is not None:
             self.message.sig.emit(self.__class__.__name__ + ": " + str(message))
@@ -77,6 +77,10 @@ class MainWindow(QDialog):
         self.b_stop_batch = QPushButton("STOP BATCH")
         self.processControlGridLayout.addWidget(self.b_stop_batch,2,0)
     
+        ## Button Doxygen. Creates and opens Doxygen documentation
+        self.b_doxygen = QPushButton("Doxygen")
+        self.processControlGridLayout.addWidget(self.b_doxygen,3,0)
+
         self.batchGroupBox.setLayout(self.processControlGridLayout)
 
         return self.batchGroupBox
@@ -193,6 +197,8 @@ class MainWindow(QDialog):
         self.log.appendPlainText("Opened batch file: " + os.path.dirname(os.path.realpath(__file__)) + "/batch.ini\n")
         return 
     
+    def doxygen(self):
+        os.system("cd Documentation && rm -r html/ && cd ../ && doxygen Documentation/Doxyfile && chromium-browser ./Documentation/html/index.html")
 ################################ MAIN APPLICATION ################################
 ## @brief main application of the well plate reader system. Instantiates the MainWindow().
 # It connects to the /tmp/printer pseudo serial link. Instantiates StepperControl class for the XY movement control and the StepperWellPositioning class for positioning the wells under the camera.
@@ -220,6 +226,7 @@ if __name__ == '__main__':
     mwi.b_firmware_restart.clicked.connect(steppers.firmwareRestart)
     #mwi.b_start_batch.clicked.connect(mwi.startBatch)
     #mwi.b_stop_batch.clicked.connect(mwi.stopBatch)
+    mwi.b_doxygen.clicked.connect(mwi.doxygen)
     mwi.b_home_x.clicked.connect(steppers.homeXY)
     mwi.b_turn_up.clicked.connect(steppers.turnUp)
     mwi.b_turn_left.clicked.connect(steppers.turnLeft)

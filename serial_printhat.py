@@ -34,6 +34,7 @@ class GcodeSerial:
         
         # make sure klipper service is active
         os.system('sudo service klipper restart && sudo service klipper status')
+        return
         
     ## @brief GcodeSerial::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
     # @param message is the string message to be emitted.

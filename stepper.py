@@ -19,31 +19,31 @@ class StepperControl():
          self.position_y = 0
 
     ## @brief StepperControl::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
-    # @param message is the string message to be emitted.
+    ## @param message is the string message to be emitted.
     def msg(self, message):
         if message is not None:
             self.message.sig.emit(self.__class__.__name__ + ": " + str(message))
         return
 
     ## @brief StepperControl::getPositionX(self) returns the position of the X stepper
-    # @return position_x of the stepper motors
+    ## @return position_x of the stepper motors
     def getPositionX(self):
         return float(self.position_x)
 
     ## @brief StepperControl::getPositionY(self) returns the position of the Y stepper
-    # @return position_y of the stepper motors
+    ## @return position_y of the stepper motors
     def getPositionY(self):
         return float(self.position_y)
 
     ## @brief StepperControl::setPositionX(self) sets the position of the X-axis
-    # @param x_pos is the new position of the X-axis which is set.
+    ## @param x_pos is the new position of the X-axis which is set.
     def setPositionX(self, x_pos):
         self.position_x = float(x_pos)
         self.msg("New XY-position: " + str(self.position_x) + ", " + str(self.position_y))
         return
 
     ## @brief StepperControl::setPositionY(self) sets the position of the Y-axis
-    # @param y_pos is the new position of the Y-axis which is set.  
+    ## @param y_pos is the new position of the Y-axis which is set.  
     def setPositionY(self, y_pos):
         self.position_y = float(y_pos)
         self.msg("New XY-position: " + str(self.position_x) + ", " + str(self.position_y))
@@ -59,7 +59,7 @@ class StepperControl():
         return
 
     ## @brief StepperControl::gotoX(self, pos) creates and executes a move G-code string for the X-axis.
-    # @param x_pos is the desired position
+    ## @param x_pos is the desired position
     def gotoX(self, x_pos):
         gcode_string = "G0 X" 
         gcode_string += str(x_pos)
@@ -69,7 +69,7 @@ class StepperControl():
         return 
 
     ## @brief StepperControl::gotoY(self, pos) creates and executes a move G-code string for the Y-axis.
-    # @param y_pos is the desired position
+    ## @param y_pos is the desired position
     def gotoY(self, y_pos):
         gcode_string = "G0 Y" 
         gcode_string += str(y_pos)
@@ -79,8 +79,8 @@ class StepperControl():
         return 
 
     ## @brief StepperControl::gotoXY(self, x_pos, y_pos) creates and executes a move G-code string for the XY-axis
-    # @param x_pos is the desired X-position
-    # @param y_pos is the desired Y-position
+    ## @param x_pos is the desired X-position
+    ## @param y_pos is the desired Y-position
     def gotoXY(self, x_pos, y_pos):
         print("in functionStepperControl::gotoXY")
         gcode_string = "G0 X" + str(x_pos) + " Y" + str(y_pos) + "\r\n"
@@ -159,8 +159,8 @@ class StepperControl():
         return
 
 ## @brief StepperWellPositioning(QObject) takes care of the positioning of the wells under the camera.
-# @param QObject is used to be able to use QObject
-# @todo check if param QObject is necessary or if class signalClass() solves the QObject inheritance already.
+## @param QObject is used to be able to use QObject
+## @todo check if param QObject is necessary or if class signalClass() solves the QObject inheritance already.
 class StepperWellPositioning(QObject):
     message = signal.signalClass()
     stepper_control = None ## object MotorControl class
@@ -169,14 +169,13 @@ class StepperWellPositioning(QObject):
     GeneralEventLoop = None
 
     ## @brief StepperWellPositioning(QObject)::__init__ initialises the stepper objects for X and Y axis and initialises the gcodeSerial to the class member variable.
-    # @param steppers is the StepperControl object representing the X- and Y-axis
+    ## @param steppers is the StepperControl object representing the X- and Y-axis
     def __init__(self, steppers):
-        self.msg("Initialising SWP")
         self.stepper_control = steppers
         return
 
     ## @brief StepperWellPositioning(QObject)::msg emits the message signal. This emit will be catched by the logging slot function in main.py.
-    # @param message is the string message to be emitted.
+    ## @param message is the string message to be emitted.
     @Slot(str)
     def msg(self, message):
         if message is not None:
@@ -189,15 +188,15 @@ class StepperWellPositioning(QObject):
         return
 
     ## @brief StepperWellPositioning(QObject)::set_current_well(self) sets the current well position.
-    # @param x is the x well coordinate
-    # @param y is the y well coordinate
+    ## @param x is the x well coordinate
+    ## @param y is the y well coordinate
     def set_current_well(self, x, y):
         self.current_well_x = x
         self.current_well_y = y
         return
         
     ## @brief StepperWellPositioning(QObject)::get_current_well(self) is the well position getter.
-    # @return current_well_x and current_well_y, the XY well position coordinates
+    ## @return current_well_x and current_well_y, the XY well position coordinates
     def get_current_well(self):
         if self.current_well_x == None or self.current_well_y == None:
             return None
@@ -206,7 +205,7 @@ class StepperWellPositioning(QObject):
         return
 
     ## @brief StepperWellPositioning(QObject)::wait_ms(self, milliseconds) is a delay function.
-    # @param milliseconds is the number of milliseconds to wait.
+    ## @param milliseconds is the number of milliseconds to wait.
     def wait_ms(self, milliseconds):
         for n in range(milliseconds):
             self.GeneralEventLoop = QEventLoop(self)
@@ -215,8 +214,8 @@ class StepperWellPositioning(QObject):
         return
 
     ## @brief StepperWellPositioning(QObject)::goto_well(self, x_pos, y_pos) 
-    # @todo implement function
+    ## @todo implement function
     @Slot()
     def goto_wel(self, x_pos, y_pos):
-        print("goto_well")
+        self.msg("goto_well")
         return
