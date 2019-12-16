@@ -6,6 +6,7 @@ import sys
 import time
 import serial_printhat
 import stepper
+import signal
 
 from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit, QFileDialog
 from PySide2.QtGui import QFont
@@ -16,11 +17,7 @@ from PySide2.QtCore import QSettings, Signal, Slot
 # @todo Creation of signal messages for the log window.
 # @todo Creation of the snapshot stream.
 class MainWindow(QDialog):
-    message = Signal(str) # message signal
-
-    ## @param Create serial instance used for writing G-code.
-    # @todo Check if PrintHAT_serial can be declared in the main application.
-    #PrintHAT_serial = serial_printhat.GcodeSerial()
+    message = signal.signalClass() # message signal
 
     settings = None
     settings_batch = None
@@ -53,6 +50,13 @@ class MainWindow(QDialog):
         self.setLayout(self.mainWindowLayout)
         self.resize(self.width(), self.height())
 
+    ## @brief Mainwindow(QDialog)::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
+    # @param message is the string message to be emitted.
+    def msg(self, message):
+        if message is not None:
+            self.message.sig.emit(self.__class__.__name__ + ": " + str(message))
+        return
+    
     ## @brief MainWindow::createBatchGroupBox(self) creates the groupbox and the widgets in it which are used for the batch control.
     # @return self.batchGroupBox. This is the groupbox containing the Batch process widgets.
     def createBatchGroupBox(self):
@@ -191,34 +195,31 @@ class MainWindow(QDialog):
     
 ################################ MAIN APPLICATION ################################
 ## @brief main application of the well plate reader system. Instantiates the MainWindow().
-# It connects to the /tmp/printer pseudo serial link. Instantiates the X and Y StepperControl classes and the StepperWellp[ositioning class.
+# It connects to the /tmp/printer pseudo serial link. Instantiates StepperControl class for the XY movement control and the StepperWellPositioning class for positioning the wells under the camera.
 # After that it connects the (window and message) signals to their slots.
-# At exit, it takes care of correct shutdown of the motors and disconnection of the /tmp/printer port.
+# At exit, it takes care of correct shutdown of the motors and disconnection of the /tmp/printer port and stopping the klipper service.
+##################################################################################
 if __name__ == '__main__':
+    
     ## Instantiate MainWindow and app
     app = QApplication([])
     ## @param mwi is the MainWindow application.
     mwi = MainWindow()
     mwi.show()
 
-    ## @param stepper_X is the X-axis stepper motor.
+    ## @param steppers is the XY stepper motor control object.
     steppers = stepper.StepperControl()
     
-    ## Connect steppers to printhat virtual port (this links the klipper software also).
+    ## Connect steppers to printhat virtual port (this links the klipper software too).
     steppers.PrintHAT_serial.connect("/tmp/printer")
-
-    ## @param stepper_Y is the Y-axis stepper motor.
-    #stepper_Y = stepper.StepperControl()
     
-    ## @param stepper_well_positioning is the positioning instance of the wells.
-    stepper_well_positioning = stepper.StepperWellpositioning(steppers)
+    ## @param stepper_well_positioning is the positioning instance of the wells making use of the steppers control class.
+    stepper_well_positioning = stepper.StepperWellPositioning(steppers)
     
     ## Signal slot connections
     mwi.b_firmware_restart.clicked.connect(steppers.firmwareRestart)
-
     #mwi.b_start_batch.clicked.connect(mwi.startBatch)
     #mwi.b_stop_batch.clicked.connect(mwi.stopBatch)
-    
     mwi.b_home_x.clicked.connect(steppers.homeXY)
     mwi.b_turn_up.clicked.connect(steppers.turnUp)
     mwi.b_turn_left.clicked.connect(steppers.turnLeft)
@@ -226,12 +227,15 @@ if __name__ == '__main__':
     mwi.b_turn_down.clicked.connect(steppers.turnDown)
     mwi.b_gotoXY.clicked.connect(lambda: steppers.gotoXY(mwi.x_pos.text(), mwi.y_pos.text()))
     mwi.b_emergency_break.clicked.connect(steppers.emergencyBreak)
-    mwi.message.connect(mwi.LogWindowInsert)
-    mwi.message.emit("creating batchgroupbox")
-    #steppers.message.connect(mwi.LogWindowInsert)
+    
+    mwi.message.sig.connect(mwi.LogWindowInsert)
+    steppers.PrintHAT_serial.message.sig.connect(mwi.LogWindowInsert)
+    steppers.message.sig.connect(mwi.LogWindowInsert)
     stepper_well_positioning.message.sig.connect(mwi.LogWindowInsert)
 
     ret = app.exec_()
+
     # stops the motors and disconnects from pseudo serial link /tmp/printer at exit
     steppers.PrintHAT_serial.disconnect()
+    
     sys.exit(ret)

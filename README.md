@@ -1,5 +1,11 @@
+1. Run system
 Run the program with the command "make run"
 
-Generate and open Doxygen documentation with the command "make docs && make open-docs". Make sure chromium-browser is installed.
+2. Run and display Doxygen documentation
+Make sure doxygen is installed using sudo apt-get install doxygen.
+
+Make sure chromium-browser is installed using sudo apt-get install chromium-browser.
+
+Run and open the documentation with the command "make docs && make open-docs". 
 
 Delete generated documentation with the command "make clean-docs"

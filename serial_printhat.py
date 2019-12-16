@@ -3,13 +3,18 @@
 
 import os
 import serial
+import signal
 
 from PySide2.QtWidgets import *
 
 ## @brief class GcodeSerial handles the /tmp/printer pseudoserial connection and writes incoming G-code. It also reads responses of the serial port.
 class GcodeSerial:
+    ## @param message is the class message signal used to display the result in the window log using its slot function.
+    message = signal.signalClass()
+
     ## @param ins is the number of instances created of GcodeSerial. This may not exceed 1.
     ins = 0
+    
     ## @param connectionState is the boolean state of the serial interface.
     connectionState = False
 
@@ -30,6 +35,13 @@ class GcodeSerial:
         # make sure klipper service is active
         os.system('sudo service klipper restart && sudo service klipper status')
         
+    ## @brief GcodeSerial::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
+    # @param message is the string message to be emitted.
+    def msg(self, message):
+        if message is not None:
+            self.message.sig.emit(self.__class__.__name__ + ": " + str(message))
+        return
+    
     ## @brief GcodeSerial::getConnectionState(self) is a connectionState getter.
     # @return self.connectionState
     def getConnectionState(self):
@@ -68,31 +80,9 @@ class GcodeSerial:
             gcode_byte_array = bytearray(gcode_string, 'utf-8')
             self.serial.write(gcode_byte_array)
         except Exception as e:
-            print("Exception in Ser_comm::executeGode(self, gcode_string)", e)
+            self.msg(e)
         return
 
-    ## @deprecated Gcode_serial::writeGotoX(self, pos)
-    # @todo check if function is redundant and remove it.
-    def writeGotoX(self, pos):
-        print("\nDEBUG: in function ser_comm::writeGotoX()")
-        posStr = "G0 X" 
-        posStr += str(pos)
-        posStr += "\r\n"
-        posByteArray = bytearray(posStr, 'utf-8')
-        self.serial.write(posByteArray)
-        return
-    
-    ## @deprecated Gcode_serial::writeGotoY(self, pos)
-    # @todo check if function is redundant and remove it.
-    def writeGotoY(self, pos):
-        print("\nDEBUG: in function ser_comm::writeGotoX()")
-        posStr = "G0 Y" 
-        posStr += str(pos)
-        posStr += "\r\n"
-        posByteArray = bytearray(posStr, 'utf-8')
-        self.serial.write(posByteArray)
-        return
-    
     ## @brief Gcode_serial::readPort(self) reads data from port while port is not empty with a timeout of x seconds (which is initialised in the Gcode_serial::__init__ function).
     # @return data is the read data from the port.
     # @todo Make a signal triggered read action.

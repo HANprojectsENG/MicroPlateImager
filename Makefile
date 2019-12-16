@@ -11,15 +11,16 @@ run:
 # create Doxygen documentation
 .PHONY: docs
 docs: clean-docs
-	@echo "--Generate documentation by Doxygen--\n"
+	@echo "--Generate documentation by Doxygen--\n\n"
 	$(shell cd $(DOCS_DIR); doxygen > /dev/null 2>&1)
-	@echo "--Generated documentation --\n"
+	#$(shell cd $(DOCS_DIR); doxygen Doxyfile)
+	@echo "--Documentation generated--\n\n"
 
 # clean up generated doxygen html documentation
 .PHONY: clean-docs
 clean-docs:
 	@echo "--Delete generated html documentation of Doxygen--\n"
-	$(shell cd $(DOCS_DIR); if [ -d "html" ]; then rm -r html; fi)
+	$(shell cd $(DOCS_DIR); if [ -d "html" ]; then rm -r html; cd ..; fi)
 	@echo "--Deleted generated html documentation--\n"
 
 .PHONY: open-docs
