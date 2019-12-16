@@ -107,16 +107,19 @@ class GcodeSerial:
     ## @brief Gcode_serial::disconnect stops the motors and the klipper service and then disconnects from pseudo serial port /tmp/printer.
     def disconnect(self):
         print("\nDEBUG: in function ser_comm::disconnect()")
-    
-        ## Stop motors
-        self.serial.write(b"M18\r\n")
-    
-        ## Stop klipper service and show its status
-        os.system('sudo service klipper stop && sudo service klipper status')
-    
-        ## Disconnect if connection is true
-        if self.getConnectionState():
-            self.serial.close()
-        else:
-            print("No connection to be closed\n")
-
+        try:
+            ## Stop motors
+            print("\nDEBUG: stop motors using M18 G-code command")
+            self.serial.write(b"M18\r\n")
+        
+            ## Stop klipper service and show its status
+            print("\nDEBUG: stop klipper service")
+            os.system('sudo service klipper stop && sudo service klipper status')
+        
+            ## Disconnect if connection is true
+            if self.getConnectionState():
+                self.serial.close()
+            else:
+                print("No connection to be closed\n")
+        except Exception as e:
+            print("exeption on serial disconnect: \n", e)

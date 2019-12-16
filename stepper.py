@@ -12,14 +12,17 @@ class signalClass(QObject):
     sig = Signal(str)
 
 ## @brief StepperControl contains steppermotor specific information and creates G-code strings when called specific functions like turnRight().
-class StepperControl:
+class StepperControl():
     ## @param message is the class message signal used to display the result in the window log using its slot function.
     message = Signal(str)
+    PrintHAT_serial = serial_printhat.GcodeSerial()
 
     ## @brief StepperControl::__init__(self) sets the motor position instance variable to zero.
     def __init__(self):
-         ## @param self.position is the instance position variable specific for each stepper motor
-         self.position = 0
+         ## @todo parameter description. Depricated: param self.position is the instance position variable specific for each stepper motor
+         #self.PrintHAT_serial.connect("/tmp/printer")
+         self.position_x = 0
+         self.position_y = 0
 
     ## @brief StepperControl::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
     # @param message is the string message to be emitted.
@@ -28,117 +31,143 @@ class StepperControl:
             self.message.emit(self.__class__.__name__ + ": " + str(message))
         return
 
-    ## @brief StepperControl::getPosition(self) returns the position of the motor instance.
-    # @return position of the motor instance
-    def getPosition(self):
-        return float(self.position)
+    ## @brief StepperControl::getPositionX(self) returns the position of the X stepper
+    # @return position_x of the stepper motors
+    def getPositionX(self):
+        return float(self.position_x)
 
-    ## @brief StepperControl::getPosition(self) sets the position of the motor instance.
-    # @param pos is the new position which is set.
-    def setPosition(self, pos):
-        self.position = float(pos)
+    ## @brief StepperControl::getPositionY(self) returns the position of the Y stepper
+    # @return position_y of the stepper motors
+    def getPositionY(self):
+        return float(self.position_y)
+
+    ## @brief StepperControl::setPositionX(self) sets the position of the X-axis
+    # @param x_pos is the new position of the X-axis which is set.
+    def setPositionX(self, x_pos):
+        self.position_x = float(x_pos)
         return
 
-    ## @brief StepperControl::homeX(self) creates a homing G-code string for the X-axis.
-    # @return gcode_string is the homing string to be executed.
-    def homeX(self):
+    ## @brief StepperControl::setPositionY(self) sets the position of the Y-axis
+    # @param y_pos is the new position of the Y-axis which is set.  
+    def setPositionY(self, y_pos):
+        self.position_y = float(y_pos)
+        return        
+
+    ## @brief StepperControl::homeX(self) creates and executes a homing G-code string for the X-axis.
+    def homeXY(self):
         gcode_string = "G28 X0 Y0\r\n"
-        return gcode_string
+        self.PrintHAT_serial.executeGcode(gcode_string)
+        self.setPositionX(0)
+        self.setPositionY(0)
+        return
 
-    ## @brief StepperControl::homeY(self) creates a homing G-code string for the Y-axis.
-    # @return gcode_string is the homing string to be executed.
-    def homeY(self):
-        gcode_string = "G28 Y0\r\n"
-        return gcode_string
-
-    ## @brief StepperControl::gotoX(self, pos) creates a move G-code string for the X-axis.
-    # @param pos is the desired position
-    # @return gcode_string is the move string to be executed.
-    def gotoX(self, pos):
+    ## @brief StepperControl::gotoX(self, pos) creates and executes a move G-code string for the X-axis.
+    # @param x_pos is the desired position
+    def gotoX(self, x_pos):
         gcode_string = "G0 X" 
-        gcode_string += str(pos)
+        gcode_string += str(x_pos)
         gcode_string += "\r\n"
-        self.setPosition(pos)
-        return gcode_string
+        self.PrintHAT_serial.executeGcode(gcode_string)
+        self.setPositionX(x_pos)
+        return 
 
-    ## @brief StepperControl::gotoY(self, pos) creates a move G-code string for the Y-axis.
-    # @param pos is the desired position
-    # @return gcode_string is the move string to be executed.
-    def gotoY(self, pos):
+    ## @brief StepperControl::gotoY(self, pos) creates and executes a move G-code string for the Y-axis.
+    # @param y_pos is the desired position
+    def gotoY(self, y_pos):
         gcode_string = "G0 Y" 
-        gcode_string += str(pos)
+        gcode_string += str(y_pos)
         gcode_string += "\r\n"
-        self.setPosition(pos)
+        self.PrintHAT_serial.executeGcode(gcode_string)
+        self.setPositionY(y_pos)
+        return 
+
+    ## @brief StepperControl::gotoXY(self, x_pos, y_pos) creates and executes a move G-code string for the XY-axis
+    # @param x_pos is the desired X-position
+    # @param y_pos is the desired Y-position
+    def gotoXY(self, x_pos, y_pos):
+        print("in functionStepperControl::gotoXY")
+        gcode_string = "G0 X" + str(x_pos) + " Y" + str(y_pos) + "\r\n"
+        self.PrintHAT_serial.executeGcode(gcode_string)
+        self.setPositionX(x_pos)
+        self.setPositionY(y_pos)
         return gcode_string
 
-    ## @brief StepperControl::turnUp(self) creates a move G-code string for the Y-axis. Each call results in a fixed distance movement.
-    # @return gcode_string is the move string to be executed.
+    ## @brief StepperControl::turnUp(self) creates and executes a move G-code string for the Y-axis. Each call results in a fixed distance movement.
     def turnUp(self):
         print("in function StepperControl::turnUp()")
-        newPosition = self.getPosition()
+        newPosition = self.getPositionY()
         newPosition +=1
-        self.setPosition(newPosition)
+        self.setPositionY(newPosition)
         gcode_string = "G0 Y"
-        gcode_string += str(self.getPosition())
+        gcode_string += str(self.getPositionY())
         gcode_string += "\r\n"
-        return gcode_string
+        self.PrintHAT_serial.executeGcode(gcode_string)
+        return 
 
-    ## @brief StepperControl::turnLeft(self) creates a move G-code string for the X-axis. Each call results in a fixed distance movement.
-    # @return gcode_string is the move string to be executed.
+    ## @brief StepperControl::turnLeft(self) creates and executes a move G-code string for the X-axis. Each call results in a fixed distance movement.
     def turnLeft(self):
         print("in function StepperControl::turnLeft()")
-        newPosition = self.getPosition()
+        newPosition = self.getPositionX()
         newPosition -=1
-        self.setPosition(newPosition)
+        self.setPositionX(newPosition)
         gcode_string = "G0 X"
-        gcode_string += str(self.getPosition())
+        gcode_string += str(self.getPositionX())
         gcode_string += "\r\n"
-        return gcode_string
+        self.PrintHAT_serial.executeGcode(gcode_string)
+        return
 
-    ## @brief StepperControl::turnRight(self) creates a move G-code string for the X-axis. Each call results in a fixed distance movement.
-    # @return gcode_string is the move string to be executed.
+    ## @brief StepperControl::turnRight(self) creates and executes a move G-code string for the X-axis. Each call results in a fixed distance movement.
     def turnRight(self):
         print("in function StepperControl::turnRight()")
-        newPosition = self.getPosition()
+        newPosition = self.getPositionX()
         newPosition +=1
-        self.setPosition(newPosition)
+        self.setPositionX(newPosition)
         gcode_string = "G0 X"
-        gcode_string += str(self.getPosition())
+        gcode_string += str(self.getPositionX())
         gcode_string += "\r\n"
-        return gcode_string
+        self.PrintHAT_serial.executeGcode(gcode_string)
+        return
 
-    ## @brief StepperControl::turnDown(self) creates a move G-code string for the Y-axis. Each call results in a fixed distance movement.
-    # @return gcode_string is the move string to be executed.
+    ## @brief StepperControl::turnDown(self) creates and executes a move G-code string for the Y-axis. Each call results in a fixed distance movement.
     def turnDown(self):
         print("in function StepperControl::turnDown()")
-        newPosition = self.getPosition()
+        newPosition = self.getPositionY()
         newPosition -=1
-        self.setPosition(newPosition)
+        self.setPositionY(newPosition)
         gcode_string = "G0 Y"
-        gcode_string += str(self.getPosition())
+        gcode_string += str(self.getPositionY())
         gcode_string += "\r\n"
-        return gcode_string
+        self.PrintHAT_serial.executeGcode(gcode_string)
+        return
+
+    ## @brief StepperControl::firmwareRestart(self) restarts the firmware and reloads the config in the klipper software.
+    def firmwareRestart(self):
+        print("in function StepperControl::firmwareRestart(self)")
+        gcode_string = "FIRMWARE_RESTART\r\n"
+        self.PrintHAT_serial.executeGcode(gcode_string)
+        return
+
+    ## @brief StepperControl::emergencyBreak(self) stops all motors and shuts down the STM microcontroller. A firmware restart command is necessary to restart the system.
+    def emergencyBreak(self):
+        print("in function Steppercontrol::emergencyBreak(self)")
+        gcode_string = "M112\r\n"
+        self.PrintHAT_serial.executeGcode(gcode_string)
+        return
 
 ## @brief StepperWellpositioning(QObject) takes care of the positioning of the wells under the camera.
 # @param QObject is used to be able to use QObject
 # @todo check if param QObject is necessary or if class signalClass() solves the QObject inheritance already.
 class StepperWellpositioning(QObject):
     message = signalClass()
-    stepper_X = None ## object MotorControl class
-    stepper_Y = None ## object MotorControl class
-    gcode_serial = None ## object GcodeSerial class
+    stepper_control = None ## object MotorControl class
     current_well_x = None
     current_well_y = None
     GeneralEventLoop = None
 
     ## @brief StepperWellpositioning(QObject)::__init__ initialises the stepper objects for X and Y axis and initialises the gcodeSerial to the class member variable.
-    # @param stepperX is the StepperControl object representing the X-axis
-    # @param stepperY is the StepperControl object representing the Y-axis
-    # @param gcodeSerial is the GcodeSerial object representing the serial connection with the PrintHAT
-    def __init__(self, stepperX, stepperY, gcodeSerial):
-        self.stepper_X = stepperX
-        self.stepper_Y = stepperY
-        self.gcode_serial = gcodeSerial
+    # @param steppers is the StepperControl object representing the X- and Y-axis
+    def __init__(self, steppers):
+        self.stepper_control = steppers
         return
 
     ## @brief StepperWellpositioning(QObject)::msg emits the message signal. This emit will be catched by the logging slot function in main.py.
@@ -146,7 +175,6 @@ class StepperWellpositioning(QObject):
     @Slot(str)
     def msg(self, message):
         if message is not None:
-            print("emitting in msg of wellp class")
             self.message.sig.emit(self.__class__.__name__ + ": " + str(message))
         return
 
@@ -185,71 +213,5 @@ class StepperWellpositioning(QObject):
     # @todo implement function
     @Slot()
     def goto_wel(self, x_pos, y_pos):
-        return
-
-    ## @brief StepperWellpositioning(QObject)::firmwareRestart(self) is the slot function which restarts the firmware and reloads the printer.cfg file when the firmwarerestartbutton in the window is pressed.
-    @Slot()
-    def firmwareRestart(self):
-        self.gcode_serial.executeGcode("FIRMWARE_RESTART\r\n")
-        print(self.gcode_serial.readPort())
-        return
-
-    ## @brief StepperWellpositioning(QObject)::hoemX(self) is executed when homeX button is pressed in the MainWindow.
-    @Slot()
-    def homeX(self):
-        self.gcode_serial.executeGcode(str(self.stepper_X.homeX()))
-        print(self.gcode_serial.readPort())
-        return
- 
-    ## @brief StepperWellpositioning(QObject)::homeX(self) is executed when the get position button is pressed in the main MainWindow.
-    # It retrieves the position from the STM microcontroller with G-code command M114.
-    @Slot()
-    def getPosition(self):
-        self.gcode_serial.executeGcode("M114\r\n")
-        print(self.gcode_serial.readPort())
         self.msg("test signal message in getPos()")
         return
-
-    ## @brief StepperWellpositioning(QObject)::turnUp(self) is executed when the turnUp button is pressed. It calls the execute function of Serial_Gcode which sends the move G-code to the STM.
-    @Slot()
-    def turnUp(self):
-        self.gcode_serial.executeGcode(str(self.stepper_Y.turnUp()))
-        return
-
-    ## @brief StepperWellpositioning(QObject)::turnLeft(self) is executed when the turnLeft button is pressed. It calls the execute function of Serial_Gcode which sends the move G-code to the STM.
-    @Slot()
-    def turnLeft(self):
-        self.gcode_serial.executeGcode(str(self.stepper_X.turnLeft()))
-        return
-
-    ## @brief StepperWellpositioning(QObject)::turnRight(self) is executed when the turnRight button is pressed. It calls the execute function of Serial_Gcode which sends the move G-code to the STM.
-    @Slot()
-    def turnRight(self):
-        self.gcode_serial.executeGcode(str(self.stepper_X.turnRight()))
-        return
-
-    ## @brief StepperWellpositioning(QObject)::turnDown(self) is executed when the turnDown button is pressed. It calls the execute function of Serial_Gcode which sends the move G-code to the STM.
-    @Slot()
-    def turnDown(self):
-        self.gcode_serial.executeGcode(str(self.stepper_Y.turnDown()))
-        return
-
-    ## @brief StepperWellpositioning(QObject)::gotoXY(self, posX, posY) is executed when the goto XY button is pressed. It calls the execute function of Serial_Gcode which sends the move G-code to the STM.
-    # @param posX is the desired X position retrieved from the MainWindow user input.
-    # @param posY is the desired Y position retrieved from the MainWindow user input.
-    @Slot()
-    def gotoXY(self, posX, posY):        
-        #self.msg("Goto X, Y: " + str(posX) + ", " + str(posY))
-        self.gcode_serial.executeGcode("G0 X" + str(posX) + " Y" + str(posY) + "\r\n")
-        self.stepper_X.setPosition(posX)
-        self.stepper_Y.setPosition(posY)
-        return
-
-    ## @brief StepperWellpositioning(QObject)::emergencyBreak(self) is executed when the emergency break button is pressed. It stops all motors and puts the STM microcontroller in shutdown. A firmware_restart is necessary to restart the software.
-    @Slot()
-    def emergencyBreak(self):
-        print("in function Wellpositioning::emergencyBreak(self)")
-        self.gcode_serial.executeGcode("M112\r\n")
-        return
-
-

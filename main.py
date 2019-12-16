@@ -20,7 +20,7 @@ class MainWindow(QDialog):
 
     ## @param Create serial instance used for writing G-code.
     # @todo Check if PrintHAT_serial can be declared in the main application.
-    PrintHAT_serial = serial_printhat.GcodeSerial()
+    #PrintHAT_serial = serial_printhat.GcodeSerial()
 
     settings = None
     settings_batch = None
@@ -201,39 +201,37 @@ if __name__ == '__main__':
     mwi = MainWindow()
     mwi.show()
 
-    ## Connect to printhat virtual port (this links the klipper software also).
-    mwi.PrintHAT_serial.connect("/tmp/printer")
-
     ## @param stepper_X is the X-axis stepper motor.
-    stepper_X = stepper.StepperControl()
+    steppers = stepper.StepperControl()
     
+    ## Connect steppers to printhat virtual port (this links the klipper software also).
+    steppers.PrintHAT_serial.connect("/tmp/printer")
+
     ## @param stepper_Y is the Y-axis stepper motor.
-    stepper_Y = stepper.StepperControl()
+    #stepper_Y = stepper.StepperControl()
     
     ## @param stepper_well_positioning is the positioning instance of the wells.
-    stepper_well_positioning = stepper.StepperWellpositioning(stepper_X, stepper_Y, mwi.PrintHAT_serial)
+    stepper_well_positioning = stepper.StepperWellpositioning(steppers)
     
     ## Signal slot connections
-    mwi.b_firmware_restart.clicked.connect(stepper_well_positioning.firmwareRestart)
+    mwi.b_firmware_restart.clicked.connect(steppers.firmwareRestart)
 
     #mwi.b_start_batch.clicked.connect(mwi.startBatch)
     #mwi.b_stop_batch.clicked.connect(mwi.stopBatch)
     
-    mwi.b_home_x.clicked.connect(stepper_well_positioning.homeX)
-    mwi.b_get_pos.clicked.connect(stepper_well_positioning.getPosition)
-    mwi.b_turn_up.clicked.connect(stepper_well_positioning.turnUp)
-    mwi.b_turn_left.clicked.connect(stepper_well_positioning.turnLeft)
-    mwi.b_turn_right.clicked.connect(stepper_well_positioning.turnRight)
-    mwi.b_turn_down.clicked.connect(stepper_well_positioning.turnDown)
-    mwi.b_gotoXY.clicked.connect(lambda: stepper_well_positioning.gotoXY(mwi.x_pos.text(), mwi.y_pos.text()))
-    mwi.b_emergency_break.clicked.connect(stepper_well_positioning.emergencyBreak)
+    mwi.b_home_x.clicked.connect(steppers.homeXY)
+    mwi.b_turn_up.clicked.connect(steppers.turnUp)
+    mwi.b_turn_left.clicked.connect(steppers.turnLeft)
+    mwi.b_turn_right.clicked.connect(steppers.turnRight)
+    mwi.b_turn_down.clicked.connect(steppers.turnDown)
+    mwi.b_gotoXY.clicked.connect(lambda: steppers.gotoXY(mwi.x_pos.text(), mwi.y_pos.text()))
+    mwi.b_emergency_break.clicked.connect(steppers.emergencyBreak)
     mwi.message.connect(mwi.LogWindowInsert)
     mwi.message.emit("creating batchgroupbox")
-    #stepper_X.message.connect(mwi.LogWindowInsert)
-    #stepper_Y.message.connect(mwi.LogWindowInsert)
+    #steppers.message.connect(mwi.LogWindowInsert)
     stepper_well_positioning.message.sig.connect(mwi.LogWindowInsert)
 
     ret = app.exec_()
     # stops the motors and disconnects from pseudo serial link /tmp/printer at exit
-    mwi.PrintHAT_serial.disconnect()
+    steppers.PrintHAT_serial.disconnect()
     sys.exit(ret)
