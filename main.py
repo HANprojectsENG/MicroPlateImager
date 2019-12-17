@@ -22,10 +22,19 @@ class MainWindow(QDialog):
 
     settings = None
     settings_batch = None
+    Well_Map = None
+    Well_Targets = None
 
     ## @brief MainWindow::__init__ initializes the window with widgets, layouts and groupboxes.
     def __init__(self):
         super().__init__()
+
+        ## Create QSettings variables in order to be able to access the initialisation parameters
+        self.openBatchIniFile()
+        self.openSettingsIniFile()
+
+        ## Load wells to process in batch from batch settings initialisation file and calculate the coordinates
+        self.wellInitialisation()
 
         ## Overall gridlayout
         self.mainWindowLayout = QGridLayout()    
@@ -62,54 +71,6 @@ class MainWindow(QDialog):
     ## @brief MainWindow::createBatchGroupBox(self) creates the groupbox and the widgets in it which are used for the batch control.
     # @return self.batchGroupBox. This is the groupbox containing the Batch process widgets.
     def createBatchGroupBox(self):
-        Well_Map = None
-        Well_Targets = None
-
-        ## Create QSettings variables in order to be able to access the initialisation parameters
-        self.openBatchIniFile()
-        self.openSettingsIniFile()
-        
-        ## Declare and define wellpositions in millimeters
-        Well_Map = np.empty(
-            (int(self.settings_batch.value("Plate/columns")) + 1,
-            int(self.settings_batch.value("Plate/rows")) + 1, 2),
-            dtype=object
-        )
-
-        ## Position 00 on the wellplate derived from the calibration data
-        Well_Map[0:][0:] = (
-            (float(self.settings_batch.value("Plate/posxA1"))),
-            (float(self.settings_batch.value("Plate/posyA1")))
-        )
-
-        self.msg("Initialising well plate with " + str(Well_Map.shape[1]) + " rows and " + str(Well_Map.shape[0]) + " collumns.")
-
-        for row in range(1, Well_Map.shape[1], 1):
-            for column in range(1, Well_Map.shape[0], 1):
-                Well_Map[column][row] = (
-                    float(self.settings_batch.value("Plate/posxA1")) + ((column-1) * float(self.settings_batch.value("Plate/deltaxWell"))),
-                    float(self.settings_batch.value("Plate/posyA1")) + ((row-1) * float(self.settings_batch.value("Plate/deltayWell")))
-                )
-                print(Well_Map[column][row])
-
-        ## load the wells to process
-        self.settings_batch.beginReadArray("Wells")
-        Well_KeyList = self.settings_batch.childKeys()
-        print("Found (" + str(len(Well_KeyList)) + "): " + str(Well_KeyList))
-        
-        Well_Targets = np.empty((len(Well_KeyList), 1),
-        dtype = [('X', 'i2'), ('Y', 'i2'), ('POS', 'U3'), ('Description', 'U100')])
-        self.settings_batch.endArray()
-        index = 0
-        for Well_Key in Well_KeyList:
-            Key_Characters = list(Well_Key)
-            X_POS = (int(Key_Characters[1]) * 10) + (int(Key_Characters[2]))
-            Y_POS = ord(Key_Characters[0].lower()) - 96
-            Well_Targets[index] = (X_POS, Y_POS, str(Well_Key), str(self.settings_batch.value("Wells/"+Well_Key)))
-            index = index+1
-        print("Well targets: ")
-        print(Well_Targets)
-        
         self.processControlGridLayout = QGridLayout()        
 
         self.batchGroupBox = QGroupBox("Batch control")
@@ -136,7 +97,7 @@ class MainWindow(QDialog):
         self.processControlGridLayout.addWidget(self.row_well_combo_box,4,0,1,1)
 
         self.row_well_combo_box.addItem(str(0) + " position")
-        for row in range(0, Well_Map.shape[1], 1):
+        for row in range(0, self.Well_Map.shape[1]-1, 1):
             self.row_well_combo_box.addItem(chr(ord('A') + row))
 
         ## Column selection label
@@ -148,7 +109,7 @@ class MainWindow(QDialog):
         self.processControlGridLayout.addWidget(self.column_well_combo_box,4,1,1,1)
         
         self.column_well_combo_box.addItem(str(0) + " position")
-        for column in range(1, Well_Map.shape[0]-1, 1):
+        for column in range(1, self.Well_Map.shape[0]-1, 1):
             self.column_well_combo_box.addItem(str(column))
     
         self.b_goto_well = QPushButton("Goto well")
@@ -253,6 +214,50 @@ class MainWindow(QDialog):
 
         return self.videoGroupBox
     
+    ## @brief MainWindow::wellInitialisation(self) declares and defines the wellpositions in millimeters of the specified targets using the batch initialisation file.
+    def wellInitialisation(self):
+        ## Declare and define wellpositions in millimeters
+        self.Well_Map = np.empty(
+            (int(self.settings_batch.value("Plate/columns")) + 1,
+            int(self.settings_batch.value("Plate/rows")) + 1, 2),
+            dtype=object
+        )
+
+        ## Position 00 on the wellplate derived from the calibration data
+        self.Well_Map[0:][0:] = (
+            (float(self.settings_batch.value("Plate/posxA1"))),
+            (float(self.settings_batch.value("Plate/posyA1")))
+        )
+
+        self.msg("Initialising well plate with " + str(self.Well_Map.shape[1]) + " rows and " + str(self.Well_Map.shape[0]) + " columns.")
+
+        for row in range(1, self.Well_Map.shape[1], 1):
+            for column in range(1, self.Well_Map.shape[0], 1):
+                self.Well_Map[column][row] = (
+                    float(self.settings_batch.value("Plate/posxA1")) + ((column-1) * float(self.settings_batch.value("Plate/deltaxWell"))),
+                    float(self.settings_batch.value("Plate/posyA1")) + ((row-1) * float(self.settings_batch.value("Plate/deltayWell")))
+                )
+                print(self.Well_Map[column][row])
+
+        ## load the wells to process
+        self.settings_batch.beginReadArray("Wells")
+        Well_KeyList = self.settings_batch.childKeys()
+        print("Found (" + str(len(Well_KeyList)) + "): " + str(Well_KeyList))
+        
+        self.Well_Targets = np.empty((len(Well_KeyList), 1),
+        dtype = [('X', 'i2'), ('Y', 'i2'), ('POS', 'U3'), ('Description', 'U100')])
+        self.settings_batch.endArray()
+        index = 0
+        for Well_Key in Well_KeyList:
+            Key_Characters = list(Well_Key)
+            X_POS = (int(Key_Characters[1]) * 10) + (int(Key_Characters[2]))
+            Y_POS = ord(Key_Characters[0].lower()) - 96
+            self.Well_Targets[index] = (X_POS, Y_POS, str(Well_Key), str(self.settings_batch.value("Wells/"+Well_Key)))
+            index = index+1
+        print("Well targets: ")
+        print(self.Well_Targets)
+        return
+    
     ## @brief MainWindow::LogWindowInsert(self, message) appends the message to the log window. This is a slot function called when a signal message is emitted from any class which uses the message signal. This Slot is connected which each class which uses this signal.
     # @param message is the message to be displayed.
     @Slot(str)
@@ -260,6 +265,7 @@ class MainWindow(QDialog):
         self.log.appendPlainText("it works: " +str(message) + "\n")
         return
 
+    
     ## @brief MainWindow::openSettingsIniFile(self) opens the initialisation file with the technical settings of the device.
     def openSettingsIniFile(self):
         print("\nDEBUG: in function MainWindow::openSettingsIniFile()")
@@ -275,7 +281,9 @@ class MainWindow(QDialog):
         return 
     
     def doxygen(self):
-        os.system("cd Documentation && rm -r html/ && cd ../ && doxygen Documentation/Doxyfile && chromium-browser ./Documentation/html/index.html")
+        os.system("cd Documentation && if [ -d ""html"" ]; then rm -r html; fi && cd ../ && doxygen Documentation/Doxyfile && chromium-browser ./Documentation/html/index.html")
+        return
+
 ################################ MAIN APPLICATION ################################
 ## @brief main application of the well plate reader system. Instantiates the MainWindow().
 # It connects to the /tmp/printer pseudo serial link. Instantiates StepperControl class for the XY movement control and the StepperWellPositioning class for positioning the wells under the camera.

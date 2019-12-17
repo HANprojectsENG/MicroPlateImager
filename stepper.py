@@ -1,10 +1,12 @@
 ## @package stepper.py
 # @brief stepper.py contains classes for stepper motor control, G-code string creation, homing and well positioning.
 
+import main
 import serial_printhat
 import signal
-
-from PySide2.QtCore import QTimer, Signal, Slot, QEventLoop, QObject
+import numpy as np
+import os
+from PySide2.QtCore import QTimer, Signal, Slot, QEventLoop, QObject, QSettings
 
 ## @brief StepperControl contains steppermotor specific information and creates G-code strings when called specific functions like turnRight().
 class StepperControl():
@@ -167,6 +169,10 @@ class StepperWellPositioning(QObject):
     current_well_x = None
     current_well_y = None
     GeneralEventLoop = None
+    Well_Map = None
+    Well_Targets = None
+    settings_batch = None
+    settings = None
 
     ## @brief StepperWellPositioning(QObject)::__init__ initialises the stepper objects for X and Y axis and initialises the gcodeSerial to the class member variable.
     ## @param steppers is the StepperControl object representing the X- and Y-axis
@@ -212,10 +218,11 @@ class StepperWellPositioning(QObject):
             QTimer.singleShot(1, self.GeneralEventLoop.exit)
             self.GeneralEventLoop.exec_()
         return
-
+    
     ## @brief StepperWellPositioning(QObject)::goto_well(self, x_pos, y_pos) 
     ## @todo implement function
     @Slot()
     def goto_wel(self, x_pos, y_pos):
-        self.msg("goto_well")
+        self.msg("goto_well at coordinates: " + str(x_pos) + ", " + str(y_pos))
+        steppers.gotoXY(x_pos, y_pos)
         return
