@@ -63,7 +63,6 @@ class MainWindow(QDialog):
     # @return self.batchGroupBox. This is the groupbox containing the Batch process widgets.
     def createBatchGroupBox(self):
         Well_Map = None
-        #Well_KeyList = None
         Well_Targets = None
 
         ## Create QSettings variables in order to be able to access the initialisation parameters
@@ -79,19 +78,19 @@ class MainWindow(QDialog):
 
         ## Position 00 on the wellplate derived from the calibration data
         Well_Map[0:][0:] = (
-            (float(self.settings_batch.value("Plate/dx00"))),
-            (float(self.settings_batch.value("Plate/dy00")))
+            (float(self.settings_batch.value("Plate/posxA1"))),
+            (float(self.settings_batch.value("Plate/posyA1")))
         )
 
-        print(str(Well_Map.shape[1]) + " rows")
-        print(str(Well_Map.shape[0]) + " collumns")
-        for y in range(1, Well_Map.shape[1], 1):
-            for x in range(1, Well_Map.shape[0], 1):
-                Well_Map[x][y] = (
-                    Well_Map[x][y] + (float(self.settings_batch.value("Plate/dxA1")) + ( (x-1) * float(self.settings_batch.value("Plate/dxWell")))),
-                    Well_Map[x][y] + (float(self.settings_batch.value("Plate/dyA1")) + ( (y-1) * float(self.settings_batch.value("Plate/dyWell"))))
+        self.msg("Initialising well plate with " + str(Well_Map.shape[1]) + " rows and " + str(Well_Map.shape[0]) + " collumns.")
+
+        for row in range(1, Well_Map.shape[1], 1):
+            for column in range(1, Well_Map.shape[0], 1):
+                Well_Map[column][row] = (
+                    float(self.settings_batch.value("Plate/posxA1")) + ((column-1) * float(self.settings_batch.value("Plate/deltaxWell"))),
+                    float(self.settings_batch.value("Plate/posyA1")) + ((row-1) * float(self.settings_batch.value("Plate/deltayWell")))
                 )
-                #print(self.Well_Map[x][y])
+                print(Well_Map[column][row])
 
         ## load the wells to process
         self.settings_batch.beginReadArray("Wells")
@@ -118,30 +117,46 @@ class MainWindow(QDialog):
 
         ## Button FIRMWARE_RESTART
         self.b_firmware_restart = QPushButton("FIRMWARE_RESTART")
-        self.processControlGridLayout.addWidget(self.b_firmware_restart,0,0)
+        self.processControlGridLayout.addWidget(self.b_firmware_restart,0,0,1,2)
 
         ## Button START BATCH
         self.b_start_batch = QPushButton("START BATCH")
-        self.processControlGridLayout.addWidget(self.b_start_batch,1,0)
+        self.processControlGridLayout.addWidget(self.b_start_batch,1,0,1,2)
 
         ## Button STOP BATCH
         self.b_stop_batch = QPushButton("STOP BATCH")
-        self.processControlGridLayout.addWidget(self.b_stop_batch,2,0)
+        self.processControlGridLayout.addWidget(self.b_stop_batch,2,0,1,2)
+
+        ## Row selection label
+        self.row_label = QLabel("Row")
+        self.processControlGridLayout.addWidget(self.row_label,3,0,1,1)
+        
+        ## Row well combobox
+        self.row_well_combo_box = QComboBox(self)
+        self.processControlGridLayout.addWidget(self.row_well_combo_box,4,0,1,1)
+
+        self.row_well_combo_box.addItem(str(0) + " position")
+        for row in range(0, Well_Map.shape[1], 1):
+            self.row_well_combo_box.addItem(chr(ord('A') + row))
+
+        ## Column selection label
+        self.column_label = QLabel("Column")
+        self.processControlGridLayout.addWidget(self.column_label,3,1,1,1)
+        
+        ## Column well combobox
+        self.column_well_combo_box = QComboBox(self)
+        self.processControlGridLayout.addWidget(self.column_well_combo_box,4,1,1,1)
+        
+        self.column_well_combo_box.addItem(str(0) + " position")
+        for column in range(1, Well_Map.shape[0]-1, 1):
+            self.column_well_combo_box.addItem(str(column))
     
-        ## X well combobox
-        self.x_well_combo_box = QComboBox(self)
-        self.processControlGridLayout.addWidget(self.x_well_combo_box,3,0)
-
-        ## Y well combobox
-        self.y_well_combo_box = QComboBox(self)
-        self.processControlGridLayout.addWidget(self.y_well_combo_box,4,0)
-
         self.b_goto_well = QPushButton("Goto well")
-        self.processControlGridLayout.addWidget(self.b_goto_well,5,0)
+        self.processControlGridLayout.addWidget(self.b_goto_well,5,0,1,2)
 
         ## Button Doxygen. Creates and opens Doxygen documentation
         self.b_doxygen = QPushButton("Doxygen")
-        self.processControlGridLayout.addWidget(self.b_doxygen,6,0)
+        self.processControlGridLayout.addWidget(self.b_doxygen,6,0,1,2)
 
         self.batchGroupBox.setLayout(self.processControlGridLayout)
 

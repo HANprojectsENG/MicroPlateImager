@@ -87,7 +87,7 @@ class StepperControl():
         self.PrintHAT_serial.executeGcode(gcode_string)
         self.setPositionX(x_pos)
         self.setPositionY(y_pos)
-        return gcode_string
+        return 
 
     ## @brief StepperControl::turnUp(self) creates and executes a move G-code string for the Y-axis. Each call results in a fixed distance movement.
     def turnUp(self):
