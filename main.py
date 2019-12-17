@@ -7,8 +7,9 @@ import time
 import serial_printhat
 import stepper
 import signal
-
-from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit, QFileDialog
+import numpy as np
+import array
+from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit, QFileDialog, QComboBox
 from PySide2.QtGui import QFont
 from PySide2.QtCore import QSettings, Signal, Slot
 
@@ -25,9 +26,10 @@ class MainWindow(QDialog):
     ## @brief MainWindow::__init__ initializes the window with widgets, layouts and groupboxes.
     def __init__(self):
         super().__init__()
-        
+
+        ## Overall gridlayout
         self.mainWindowLayout = QGridLayout()    
-           
+
         ## @param mgb is a groupbox with manual control widgets
         mgb = self.createManualGroupBox()
 
@@ -60,6 +62,55 @@ class MainWindow(QDialog):
     ## @brief MainWindow::createBatchGroupBox(self) creates the groupbox and the widgets in it which are used for the batch control.
     # @return self.batchGroupBox. This is the groupbox containing the Batch process widgets.
     def createBatchGroupBox(self):
+        Well_Map = None
+        #Well_KeyList = None
+        Well_Targets = None
+
+        ## Create QSettings variables in order to be able to access the initialisation parameters
+        self.openBatchIniFile()
+        self.openSettingsIniFile()
+        
+        ## Declare and define wellpositions in millimeters
+        Well_Map = np.empty(
+            (int(self.settings_batch.value("Plate/columns")) + 1,
+            int(self.settings_batch.value("Plate/rows")) + 1, 2),
+            dtype=object
+        )
+
+        ## Position 00 on the wellplate derived from the calibration data
+        Well_Map[0:][0:] = (
+            (float(self.settings_batch.value("Plate/dx00"))),
+            (float(self.settings_batch.value("Plate/dy00")))
+        )
+
+        print(str(Well_Map.shape[1]) + " rows")
+        print(str(Well_Map.shape[0]) + " collumns")
+        for y in range(1, Well_Map.shape[1], 1):
+            for x in range(1, Well_Map.shape[0], 1):
+                Well_Map[x][y] = (
+                    Well_Map[x][y] + (float(self.settings_batch.value("Plate/dxA1")) + ( (x-1) * float(self.settings_batch.value("Plate/dxWell")))),
+                    Well_Map[x][y] + (float(self.settings_batch.value("Plate/dyA1")) + ( (y-1) * float(self.settings_batch.value("Plate/dyWell"))))
+                )
+                #print(self.Well_Map[x][y])
+
+        ## load the wells to process
+        self.settings_batch.beginReadArray("Wells")
+        Well_KeyList = self.settings_batch.childKeys()
+        print("Found (" + str(len(Well_KeyList)) + "): " + str(Well_KeyList))
+        
+        Well_Targets = np.empty((len(Well_KeyList), 1),
+        dtype = [('X', 'i2'), ('Y', 'i2'), ('POS', 'U3'), ('Description', 'U100')])
+        self.settings_batch.endArray()
+        index = 0
+        for Well_Key in Well_KeyList:
+            Key_Characters = list(Well_Key)
+            X_POS = (int(Key_Characters[1]) * 10) + (int(Key_Characters[2]))
+            Y_POS = ord(Key_Characters[0].lower()) - 96
+            Well_Targets[index] = (X_POS, Y_POS, str(Well_Key), str(self.settings_batch.value("Wells/"+Well_Key)))
+            index = index+1
+        print("Well targets: ")
+        print(Well_Targets)
+        
         self.processControlGridLayout = QGridLayout()        
 
         self.batchGroupBox = QGroupBox("Batch control")
@@ -77,9 +128,20 @@ class MainWindow(QDialog):
         self.b_stop_batch = QPushButton("STOP BATCH")
         self.processControlGridLayout.addWidget(self.b_stop_batch,2,0)
     
+        ## X well combobox
+        self.x_well_combo_box = QComboBox(self)
+        self.processControlGridLayout.addWidget(self.x_well_combo_box,3,0)
+
+        ## Y well combobox
+        self.y_well_combo_box = QComboBox(self)
+        self.processControlGridLayout.addWidget(self.y_well_combo_box,4,0)
+
+        self.b_goto_well = QPushButton("Goto well")
+        self.processControlGridLayout.addWidget(self.b_goto_well,5,0)
+
         ## Button Doxygen. Creates and opens Doxygen documentation
         self.b_doxygen = QPushButton("Doxygen")
-        self.processControlGridLayout.addWidget(self.b_doxygen,3,0)
+        self.processControlGridLayout.addWidget(self.b_doxygen,6,0)
 
         self.batchGroupBox.setLayout(self.processControlGridLayout)
 
@@ -187,14 +249,14 @@ class MainWindow(QDialog):
     def openSettingsIniFile(self):
         print("\nDEBUG: in function MainWindow::openSettingsIniFile()")
         self.settings = QSettings(os.path.dirname(os.path.realpath(__file__)) + "/settings.ini",  QSettings.IniFormat)
-        self.log.appendPlainText("Opened settingsfile: " + os.path.dirname(os.path.realpath(__file__)) + "/settings.ini\n")
+        self.msg("Opened settingsfile: " + os.path.dirname(os.path.realpath(__file__)) + "/settings.ini\n")
         return 
 
     ## @brief MainWindow::openBatchIniFile(self) opens the initialisation file with the batch process settings of the device and wells.
     def openBatchIniFile(self):
         print("\nDEBUG: in function MainWindow::openBatchIniFile()")
         self.settings_batch = QSettings(os.path.dirname(os.path.realpath(__file__)) + "/batch.ini",  QSettings.IniFormat)
-        self.log.appendPlainText("Opened batch file: " + os.path.dirname(os.path.realpath(__file__)) + "/batch.ini\n")
+        self.msg("Opened batch file: " + os.path.dirname(os.path.realpath(__file__)) + "/batch.ini\n")
         return 
     
     def doxygen(self):
