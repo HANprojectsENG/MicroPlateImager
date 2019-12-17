@@ -16,8 +16,10 @@ class StepperControl():
 
     ## @brief StepperControl::__init__(self) sets the motor position instance variable to zero.
     def __init__(self):
-         ## @todo parameter description. Depricated: param self.position is the instance position variable specific for each stepper motor
+         ## @param position_x is the x-coordinate in mm of the wellplate reader measured from the homeposition
          self.position_x = 0
+
+         ## @param position_y is the y-coordinate in mm of the wellplate reader measured from the homeposition
          self.position_y = 0
 
     ## @brief StepperControl::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
@@ -163,16 +165,12 @@ class StepperControl():
 ## @brief StepperWellPositioning(QObject) takes care of the positioning of the wells under the camera.
 ## @param QObject is used to be able to use QObject
 ## @todo check if param QObject is necessary or if class signalClass() solves the QObject inheritance already.
-class StepperWellPositioning(QObject):
+class StepperWellPositioning():
     message = signal.signalClass()
     stepper_control = None ## object MotorControl class
     current_well_x = None
     current_well_y = None
     GeneralEventLoop = None
-    Well_Map = None
-    Well_Targets = None
-    settings_batch = None
-    settings = None
 
     ## @brief StepperWellPositioning(QObject)::__init__ initialises the stepper objects for X and Y axis and initialises the gcodeSerial to the class member variable.
     ## @param steppers is the StepperControl object representing the X- and Y-axis
@@ -222,7 +220,8 @@ class StepperWellPositioning(QObject):
     ## @brief StepperWellPositioning(QObject)::goto_well(self, x_pos, y_pos) 
     ## @todo implement function
     @Slot()
-    def goto_wel(self, x_pos, y_pos):
+    def goto_well(self, x_pos, y_pos):
         self.msg("goto_well at coordinates: " + str(x_pos) + ", " + str(y_pos))
-        steppers.gotoXY(x_pos, y_pos)
+        self.stepper_control.gotoXY(x_pos, y_pos)
+        ## on succeed -> set current well
         return

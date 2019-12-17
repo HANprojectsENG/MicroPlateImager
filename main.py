@@ -262,10 +262,9 @@ class MainWindow(QDialog):
     # @param message is the message to be displayed.
     @Slot(str)
     def LogWindowInsert(self, message):
-        self.log.appendPlainText("it works: " +str(message) + "\n")
+        self.log.appendPlainText(str(message) + "\n")
         return
 
-    
     ## @brief MainWindow::openSettingsIniFile(self) opens the initialisation file with the technical settings of the device.
     def openSettingsIniFile(self):
         print("\nDEBUG: in function MainWindow::openSettingsIniFile()")
@@ -280,8 +279,10 @@ class MainWindow(QDialog):
         self.msg("Opened batch file: " + os.path.dirname(os.path.realpath(__file__)) + "/batch.ini\n")
         return 
     
+    ## @brief mainWindow::doxygen(self) generates Doxygen documentation and opens a chromium-browser with the ./Documentation/html/index.html documentation website.
     def doxygen(self):
         os.system("cd Documentation && if [ -d ""html"" ]; then rm -r html; fi && cd ../ && doxygen Documentation/Doxyfile && chromium-browser ./Documentation/html/index.html")
+        self.msg("Generated Doxygen documentation")
         return
 
 ################################ MAIN APPLICATION ################################
@@ -294,6 +295,7 @@ if __name__ == '__main__':
     
     ## Instantiate MainWindow and app
     app = QApplication([])
+
     ## @param mwi is the MainWindow application.
     mwi = MainWindow()
     mwi.show()
@@ -319,7 +321,8 @@ if __name__ == '__main__':
     mwi.b_turn_down.clicked.connect(steppers.turnDown)
     mwi.b_gotoXY.clicked.connect(lambda: steppers.gotoXY(mwi.x_pos.text(), mwi.y_pos.text()))
     mwi.b_emergency_break.clicked.connect(steppers.emergencyBreak)
-    
+    mwi.b_goto_well.clicked.connect(lambda: stepper_well_positioning.goto_well(10, 10))
+
     mwi.message.sig.connect(mwi.LogWindowInsert)
     steppers.PrintHAT_serial.message.sig.connect(mwi.LogWindowInsert)
     steppers.message.sig.connect(mwi.LogWindowInsert)
