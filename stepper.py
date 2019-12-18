@@ -29,6 +29,16 @@ class StepperControl():
             self.message.sig.emit(self.__class__.__name__ + ": " + str(message))
         return
 
+    def getPositionFromSTM(self):
+        if self.PrintHAT_serial.getConnectionState():
+            self.msg("Retrieving position from STM microcontroller")
+            gcode_string = "M114\r\n"
+            self.PrintHAT_serial.executeGcode(gcode_string)
+            self.PrintHAT_serial.readPort()
+        else:
+            self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
+        return
+
     ## @brief StepperControl::getPositionX(self) returns the position of the X stepper
     ## @return position_x of the stepper motors
     def getPositionX(self):
@@ -55,31 +65,40 @@ class StepperControl():
 
     ## @brief StepperControl::homeX(self) creates and executes a homing G-code string for the X-axis.
     def homeXY(self):
-        self.msg("Homing X and Y axis")
-        gcode_string = "G28 X0 Y0\r\n"
-        self.PrintHAT_serial.executeGcode(gcode_string)
-        self.setPositionX(0)
-        self.setPositionY(0)
+        if self.PrintHAT_serial.getConnectionState():
+            self.msg("Homing X and Y axis")
+            gcode_string = "G28 X0 Y0\r\n"
+            self.PrintHAT_serial.executeGcode(gcode_string)
+            self.setPositionX(0)
+            self.setPositionY(0)
+        else:
+            self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
         return
 
     ## @brief StepperControl::gotoX(self, pos) creates and executes a move G-code string for the X-axis.
     ## @param x_pos is the desired position
     def gotoX(self, x_pos):
-        gcode_string = "G0 X" 
-        gcode_string += str(x_pos)
-        gcode_string += "\r\n"
-        self.PrintHAT_serial.executeGcode(gcode_string)
-        self.setPositionX(x_pos)
+        if self.PrintHAT_serial.getConnectionState():
+            gcode_string = "G0 X" 
+            gcode_string += str(x_pos)
+            gcode_string += "\r\n"
+            self.PrintHAT_serial.executeGcode(gcode_string)
+            self.setPositionX(x_pos)
+        else:
+            self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
         return 
 
     ## @brief StepperControl::gotoY(self, pos) creates and executes a move G-code string for the Y-axis.
     ## @param y_pos is the desired position
     def gotoY(self, y_pos):
-        gcode_string = "G0 Y" 
-        gcode_string += str(y_pos)
-        gcode_string += "\r\n"
-        self.PrintHAT_serial.executeGcode(gcode_string)
-        self.setPositionY(y_pos)
+        if self.PrintHAT_serial.getConnectionState():
+            gcode_string = "G0 Y" 
+            gcode_string += str(y_pos)
+            gcode_string += "\r\n"
+            self.PrintHAT_serial.executeGcode(gcode_string)
+            self.setPositionY(y_pos)
+        else:
+            self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
         return 
 
     ## @brief StepperControl::gotoXY(self, x_pos, y_pos) creates and executes a move G-code string for the XY-axis
@@ -87,64 +106,79 @@ class StepperControl():
     ## @param y_pos is the desired Y-position
     def gotoXY(self, x_pos, y_pos):
         print("in functionStepperControl::gotoXY")
-        gcode_string = "G0 X" + str(x_pos) + " Y" + str(y_pos) + "\r\n"
-        self.PrintHAT_serial.executeGcode(gcode_string)
-        self.setPositionX(x_pos)
-        self.setPositionY(y_pos)
+        if self.PrintHAT_serial.getConnectionState():
+            gcode_string = "G0 X" + str(x_pos) + " Y" + str(y_pos) + "\r\n"
+            self.PrintHAT_serial.executeGcode(gcode_string)
+            self.setPositionX(x_pos)
+            self.setPositionY(y_pos)
+        else:
+            self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
         return 
 
     ## @brief StepperControl::turnUp(self) creates and executes a move G-code string for the Y-axis. Each call results in a fixed distance movement.
     def turnUp(self):
         print("in function StepperControl::turnUp()")
-        newPosition = self.getPositionY()
-        newPosition +=1
-        self.setPositionY(newPosition)
-        gcode_string = "G0 Y"
-        gcode_string += str(self.getPositionY())
-        gcode_string += "\r\n"
-        self.PrintHAT_serial.executeGcode(gcode_string)
-        return 
-
-    ## @brief StepperControl::turnLeft(self) creates and executes a move G-code string for the X-axis. Each call results in a fixed distance movement.
-    def turnLeft(self):
-        print("in function StepperControl::turnLeft()")
-        if self.getPositionX() > 0:
-            newPosition = self.getPositionX()
-            newPosition -=1
-            self.setPositionX(newPosition)
-            gcode_string = "G0 X"
-            gcode_string += str(self.getPositionX())
-            gcode_string += "\r\n"
-            self.PrintHAT_serial.executeGcode(gcode_string)
-        else:
-            self.msg("You try to move beyond the minimum X position. X position is: " + str(self.getPositionX()))
-        return
-
-    ## @brief StepperControl::turnRight(self) creates and executes a move G-code string for the X-axis. Each call results in a fixed distance movement.
-    def turnRight(self):
-        print("in function StepperControl::turnRight()")
-        newPosition = self.getPositionX()
-        newPosition +=1
-        self.setPositionX(newPosition)
-        gcode_string = "G0 X"
-        gcode_string += str(self.getPositionX())
-        gcode_string += "\r\n"
-        self.PrintHAT_serial.executeGcode(gcode_string)
-        return
-
-    ## @brief StepperControl::turnDown(self) creates and executes a move G-code string for the Y-axis. Each call results in a fixed distance movement.
-    def turnDown(self):
-        print("in function StepperControl::turnDown()")
-        if self.getPositionY() > 0:
+        if self.PrintHAT_serial.getConnectionState():
             newPosition = self.getPositionY()
-            newPosition -=1
+            newPosition +=1
             self.setPositionY(newPosition)
             gcode_string = "G0 Y"
             gcode_string += str(self.getPositionY())
             gcode_string += "\r\n"
             self.PrintHAT_serial.executeGcode(gcode_string)
         else:
-            self.msg("You try to move beyond the minimum Y position. Y position is: " + str(self.getPositionY()))
+            self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
+        return 
+
+    ## @brief StepperControl::turnLeft(self) creates and executes a move G-code string for the X-axis. Each call results in a fixed distance movement.
+    def turnLeft(self):
+        print("in function StepperControl::turnLeft()")
+        if self.PrintHAT_serial.getConnectionState():
+            if self.getPositionX() > 0:
+                newPosition = self.getPositionX()
+                newPosition -=1
+                self.setPositionX(newPosition)
+                gcode_string = "G0 X"
+                gcode_string += str(self.getPositionX())
+                gcode_string += "\r\n"
+                self.PrintHAT_serial.executeGcode(gcode_string)
+            else:
+                self.msg("You try to move beyond the minimum X position. X position is: " + str(self.getPositionX()))
+        else:
+            self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
+        return
+
+    ## @brief StepperControl::turnRight(self) creates and executes a move G-code string for the X-axis. Each call results in a fixed distance movement.
+    def turnRight(self):
+        print("in function StepperControl::turnRight()")
+        if self.PrintHAT_serial.getConnectionState():
+            newPosition = self.getPositionX()
+            newPosition +=1
+            self.setPositionX(newPosition)
+            gcode_string = "G0 X"
+            gcode_string += str(self.getPositionX())
+            gcode_string += "\r\n"
+            self.PrintHAT_serial.executeGcode(gcode_string)
+        else:
+            self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
+        return
+
+    ## @brief StepperControl::turnDown(self) creates and executes a move G-code string for the Y-axis. Each call results in a fixed distance movement.
+    def turnDown(self):
+        print("in function StepperControl::turnDown()")
+        if self.PrintHAT_serial.getConnectionState():
+            if self.getPositionY() > 0:
+                newPosition = self.getPositionY()
+                newPosition -=1
+                self.setPositionY(newPosition)
+                gcode_string = "G0 Y"
+                gcode_string += str(self.getPositionY())
+                gcode_string += "\r\n"
+                self.PrintHAT_serial.executeGcode(gcode_string)
+            else:
+                self.msg("You try to move beyond the minimum Y position. Y position is: " + str(self.getPositionY()))
+        else:
+            self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
         return
 
     ## @brief StepperControl::firmwareRestart(self) restarts the firmware and reloads the config in the klipper software.
@@ -168,8 +202,8 @@ class StepperControl():
 class StepperWellPositioning():
     message = signal.signalClass()
     stepper_control = None ## object MotorControl class
-    current_well_x = None
-    current_well_y = None
+    current_well_row = None
+    current_well_column = None
     GeneralEventLoop = None
 
     ## @brief StepperWellPositioning(QObject)::__init__ initialises the stepper objects for X and Y axis and initialises the gcodeSerial to the class member variable.
@@ -192,36 +226,35 @@ class StepperWellPositioning():
         return
 
     ## @brief StepperWellPositioning(QObject)::set_current_well(self) sets the current well position.
-    ## @param x is the x well coordinate
-    ## @param y is the y well coordinate
-    def set_current_well(self, x, y):
-        self.current_well_x = x
-        self.current_well_y = y
+    ## @param column is the column or x well coordinate
+    ## @param row is the row or y well coordinate
+    def set_current_well(self, column, row):
+        self.current_well_column = column
+        self.current_well_row = row
         return
         
     ## @brief StepperWellPositioning(QObject)::get_current_well(self) is the well position getter.
-    ## @return current_well_x and current_well_y, the XY well position coordinates
+    ## @return current_well_column and current_well_row, the XY well position coordinates
     def get_current_well(self):
-        if self.current_well_x == None or self.current_well_y == None:
-            return None
-        else: 
-            return self.current_well_x, self.current_well_y
-        return
+        if self.current_well_column == None or self.current_well_row == None:
+            self.current_well_column = None
+            self.current_well_row = None
+        return self.current_well_column, self.current_well_row
 
     ## @brief StepperWellPositioning(QObject)::wait_ms(self, milliseconds) is a delay function.
     ## @param milliseconds is the number of milliseconds to wait.
     def wait_ms(self, milliseconds):
-        for n in range(milliseconds):
-            self.GeneralEventLoop = QEventLoop(self)
-            QTimer.singleShot(1, self.GeneralEventLoop.exit)
-            self.GeneralEventLoop.exec_()
+        GeneralEventLoop = QEventLoop()
+        QTimer.singleShot(milliseconds, GeneralEventLoop.exit)
+        GeneralEventLoop.exec_()
         return
     
-    ## @brief StepperWellPositioning(QObject)::goto_well(self, x_pos, y_pos) 
-    ## @todo implement function
+    ## @brief StepperWellPositioning(QObject)::goto_well(self, x_pos, y_pos) navigates to the desired well.
+    ## @param row is the row at which the well is on the well plate. Changing the row affects the y-axis position.
+    ## @param column is the column at which the well is on the well plate. Changing the row affects the x-axis position.
     @Slot()
-    def goto_well(self, x_pos, y_pos):
-        self.msg("goto_well at coordinates: " + str(x_pos) + ", " + str(y_pos))
-        self.stepper_control.gotoXY(x_pos, y_pos)
-        ## on succeed -> set current well
+    def goto_well(self, row, column):
+        self.msg("goto_well at row " + str(row) + ", column:" + str(column))
+        self.stepper_control.gotoXY(column, row)
+        self.set_current_well(column, row)
         return

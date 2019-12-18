@@ -9,9 +9,9 @@ import stepper
 import signal
 import numpy as np
 import array
-from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit, QFileDialog, QComboBox
-from PySide2.QtGui import QFont
-from PySide2.QtCore import QSettings, Signal, Slot
+from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit, QFileDialog, QComboBox, QSizePolicy
+from PySide2.QtGui import QFont, QColor, QPalette
+from PySide2.QtCore import QSettings, Signal, Slot, Qt
 
 ## @brief MainWindow(QDialog) instantiates a main window. It consists of a manual control groupbox in which the user can control the steppers of the plate reader manually. Furthermore a groupbox with batch control widgets is created. A groupbox with log window provides runtime debug information. A groupbox with a camerastream widget shows the snapshots created by the well.
 ## @param QDialog is used as the window is a user interactive GUI.
@@ -58,6 +58,14 @@ class MainWindow(QDialog):
         self.mainWindowLayout.addWidget(lgb,1,1)
 
         self.setWindowTitle("PrintHAT")
+        
+        #self.mainWindowLayout.setStyleSheet('background-color: #a9a9a9')
+        
+        self.backgroundPalette = QPalette()
+        self.backgroundColor = QColor(50, 50, 50)
+        self.backgroundPalette.setColor(QPalette.Background, self.backgroundColor)
+        self.setPalette(self.backgroundPalette)
+
         self.setLayout(self.mainWindowLayout)
         self.resize(self.width(), self.height())
 
@@ -68,56 +76,56 @@ class MainWindow(QDialog):
             self.message.sig.emit(self.__class__.__name__ + ": " + str(message))
         return
     
+    ## @brief MainWindow::LogWindowInsert(self, message) appends the message to the log window. This is a slot function called when a signal message is emitted from any class which uses the message signal. This Slot is connected which each class which uses this signal.
+    # @param message is the message to be displayed.
+    @Slot(str)
+    def LogWindowInsert(self, message):
+        self.log.appendPlainText(str(message) + "\n")
+        return
+
     ## @brief MainWindow::createBatchGroupBox(self) creates the groupbox and the widgets in it which are used for the batch control.
     # @return self.batchGroupBox. This is the groupbox containing the Batch process widgets.
     def createBatchGroupBox(self):
         self.processControlGridLayout = QGridLayout()        
 
-        self.batchGroupBox = QGroupBox("Batch control")
+        self.batchGroupBox = QGroupBox()
         self.batchGroupBox.setStyleSheet("color: #000000;")
+
+        ## label of QGroupbox content
+        self.gb_label = QLabel("Batch control")
+        self.gb_label.setStyleSheet('QLabel {color: #ffffff; font-weight: bold}')
+        self.gb_label.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.processControlGridLayout.addWidget(self.gb_label,0,0,1,3, Qt.AlignHCenter)  
 
         ## Button FIRMWARE_RESTART
         self.b_firmware_restart = QPushButton("FIRMWARE_RESTART")
-        self.processControlGridLayout.addWidget(self.b_firmware_restart,0,0,1,2)
+        self.b_firmware_restart.setStyleSheet('QPushButton {background-color: #ffff33; border: none}')
+        self.b_firmware_restart.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.processControlGridLayout.addWidget(self.b_firmware_restart,1,0,1,1)
+
+        ## Button Read STM buffer
+        self.b_stm_read = QPushButton("STM READ")
+        self.b_stm_read.setStyleSheet('QPushButton {background-color: #ffff33; border: none}')
+        self.b_stm_read.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.processControlGridLayout.addWidget(self.b_stm_read,1,1,1,1)
 
         ## Button START BATCH
         self.b_start_batch = QPushButton("START BATCH")
-        self.processControlGridLayout.addWidget(self.b_start_batch,1,0,1,2)
+        self.b_start_batch.setStyleSheet('QPushButton {background-color: #9083f0; border: none}')
+        self.b_start_batch.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.processControlGridLayout.addWidget(self.b_start_batch,2,0,1,2)
 
         ## Button STOP BATCH
         self.b_stop_batch = QPushButton("STOP BATCH")
-        self.processControlGridLayout.addWidget(self.b_stop_batch,2,0,1,2)
-
-        ## Row selection label
-        self.row_label = QLabel("Row")
-        self.processControlGridLayout.addWidget(self.row_label,3,0,1,1)
-        
-        ## Row well combobox
-        self.row_well_combo_box = QComboBox(self)
-        self.processControlGridLayout.addWidget(self.row_well_combo_box,4,0,1,1)
-
-        self.row_well_combo_box.addItem(str(0) + " position")
-        for row in range(0, self.Well_Map.shape[1]-1, 1):
-            self.row_well_combo_box.addItem(chr(ord('A') + row))
-
-        ## Column selection label
-        self.column_label = QLabel("Column")
-        self.processControlGridLayout.addWidget(self.column_label,3,1,1,1)
-        
-        ## Column well combobox
-        self.column_well_combo_box = QComboBox(self)
-        self.processControlGridLayout.addWidget(self.column_well_combo_box,4,1,1,1)
-        
-        self.column_well_combo_box.addItem(str(0) + " position")
-        for column in range(1, self.Well_Map.shape[0]-1, 1):
-            self.column_well_combo_box.addItem(str(column))
-    
-        self.b_goto_well = QPushButton("Goto well")
-        self.processControlGridLayout.addWidget(self.b_goto_well,5,0,1,2)
+        self.b_stop_batch.setStyleSheet('QPushButton {background-color: #9083f0; border: none}')
+        self.b_stop_batch.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.processControlGridLayout.addWidget(self.b_stop_batch,3,0,1,2)
 
         ## Button Doxygen. Creates and opens Doxygen documentation
         self.b_doxygen = QPushButton("Doxygen")
-        self.processControlGridLayout.addWidget(self.b_doxygen,6,0,1,2)
+        self.b_doxygen.setStyleSheet('QPushButton {background-color: #ffa500; border: none}')
+        self.b_doxygen.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.processControlGridLayout.addWidget(self.b_doxygen,4,0,1,2)
 
         self.batchGroupBox.setLayout(self.processControlGridLayout)
 
@@ -127,53 +135,128 @@ class MainWindow(QDialog):
     # @return self.manualGroupBox. This is the groupbox containing the manual control process widgets.
     def createManualGroupBox(self):
         self.manualControlGridLayout = QGridLayout()   
-        self.manualGroupBox = QGroupBox("Manual XY-control")
+        self.manualGroupBox = QGroupBox()
         self.manualGroupBox.setStyleSheet("color: #000000;")
+
+        ## label of QGroupbox content
+        self.gb_label = QLabel("Manual XY-control")
+        self.gb_label.setStyleSheet('QLabel {color: #ffffff; font-weight: bold}')
+        self.gb_label.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.manualControlGridLayout.addWidget(self.gb_label,0,0,1,4, Qt.AlignHCenter)  
 
         ## Button HOME X
         self.b_home_x = QPushButton("HOME X0 Y0")
-        self.manualControlGridLayout.addWidget(self.b_home_x,0,0,1,2)
+        self.b_home_x.setStyleSheet('QPushButton {background-color: #55afff; border: none}')
+        self.b_home_x.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.manualControlGridLayout.addWidget(self.b_home_x,1,0,1,4)
 
         ## Button GET_POSITION
         self.b_get_pos = QPushButton("GET_POSITION")
-        self.manualControlGridLayout.addWidget(self.b_get_pos,1,0,1,2)
+        self.b_get_pos.setStyleSheet('QPushButton {background-color: #55afff; border: none}')
+        self.b_get_pos.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.manualControlGridLayout.addWidget(self.b_get_pos,2,0,1,4)
         
-        ## Button TURN UP
-        self.b_turn_up = QPushButton("^")
-        self.manualControlGridLayout.addWidget(self.b_turn_up,2,0,1,2)
-
-        ## Button TURN LEFT
-        self.b_turn_left = QPushButton("<")
-        self.manualControlGridLayout.addWidget(self.b_turn_left,3,0,1,1)
-
-        ## Button TURN RIGHT
-        self.b_turn_right = QPushButton(">")
-        self.manualControlGridLayout.addWidget(self.b_turn_right,3,1,1,1)
-
-        ## Button TURN DOWN
-        self.b_turn_down = QPushButton("v")
-        self.manualControlGridLayout.addWidget(self.b_turn_down,4,0,1,2)
+        ## Row selection label
+        self.x_label = QLabel("X")
+        self.x_label.setStyleSheet('QLabel {color: #ffffff}')
+        self.x_label.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.manualControlGridLayout.addWidget(self.x_label,3,0,1,1)  
 
         ## X position input field
         self.x_pos = QLineEdit()
+        self.x_pos.setStyleSheet('QLineEdit {background-color: #AAAAAA; color: #000000; border: none}')
+        self.x_pos.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
         self.x_pos.setText('0.00')
         self.x_pos.setFont(QFont("Arial",20))
-        self.manualControlGridLayout.addWidget(self.x_pos,5,0)
+        self.manualControlGridLayout.addWidget(self.x_pos,4,0)
+
+        ## Row selection label
+        self.y_label = QLabel("Y")
+        self.y_label.setStyleSheet('QLabel {color: #ffffff}')
+        self.y_label.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.manualControlGridLayout.addWidget(self.y_label,3,1,1,1)  
 
         ## Y position input field
         self.y_pos = QLineEdit()
+        self.y_pos.setStyleSheet('QLineEdit {background-color: #AAAAAA; color: #000000; border: none}')
+        self.y_pos.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
         self.y_pos.setText('0.00')
         self.y_pos.setFont(QFont("Arial",20))
-        self.manualControlGridLayout.addWidget(self.y_pos,5,1)
+        self.manualControlGridLayout.addWidget(self.y_pos,4,1)
 
-        ## Button goto X
+        ## Button goto XY
         self.b_gotoXY = QPushButton("Goto XY")
-        self.manualControlGridLayout.addWidget(self.b_gotoXY,6,0,1,2)
+        self.b_gotoXY.setStyleSheet('QPushButton {background-color: #00cc33; border: none}')
+        self.b_gotoXY.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.manualControlGridLayout.addWidget(self.b_gotoXY,5,0,1,2)
+
+        ## Row selection label
+        self.row_label = QLabel("Row")
+        self.row_label.setStyleSheet('QLabel {color: #ffffff}')
+        self.row_label.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.manualControlGridLayout.addWidget(self.row_label,3,2,1,1)
+        
+        ## Row well combobox
+        self.row_well_combo_box = QComboBox(self)
+        self.row_well_combo_box.setStyleSheet('QComboBox {background-color: #AAAAAA; border: none}')
+        self.row_well_combo_box.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.manualControlGridLayout.addWidget(self.row_well_combo_box,4,2,1,1)
+
+        self.row_well_combo_box.addItem(str(0) + " position")
+        for row in range(0, self.Well_Map.shape[0]-1, 1):
+            self.row_well_combo_box.addItem(chr(ord('A') + row))
+
+        ## Column selection label
+        self.column_label = QLabel("Column")
+        self.column_label.setStyleSheet('QLabel {color: #ffffff}')
+        self.column_label.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.manualControlGridLayout.addWidget(self.column_label,3,3,1,1)
+        
+        ## Column well combobox
+        self.column_well_combo_box = QComboBox(self)
+        self.column_well_combo_box.setStyleSheet('QComboBox {background-color: #AAAAAA; border: none}')
+        self.column_well_combo_box.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.manualControlGridLayout.addWidget(self.column_well_combo_box,4,3,1,1)
+        
+        self.column_well_combo_box.addItem(str(0) + " position")
+        for column in range(1, self.Well_Map.shape[1], 1):
+            self.column_well_combo_box.addItem(str(column))
+    
+        ## Button Goto well
+        self.b_goto_well = QPushButton("Goto well")
+        self.b_goto_well.setStyleSheet('QPushButton {background-color: #00cc33; border: none}')
+        self.b_goto_well.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.manualControlGridLayout.addWidget(self.b_goto_well,5,2,1,2)
+
+        ## Button TURN UP
+        self.b_turn_up = QPushButton("^")
+        self.b_turn_up.setStyleSheet('QPushButton {background-color: #00cc33; border: none}')
+        self.b_turn_up.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.manualControlGridLayout.addWidget(self.b_turn_up,6,0,1,4)
+
+        ## Button TURN LEFT
+        self.b_turn_left = QPushButton("<")
+        self.b_turn_left.setStyleSheet('QPushButton {background-color: #00cc33; border: none}')
+        self.b_turn_left.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.manualControlGridLayout.addWidget(self.b_turn_left,7,0,1,2)
+
+        ## Button TURN RIGHT
+        self.b_turn_right = QPushButton(">")
+        self.b_turn_right.setStyleSheet('QPushButton {background-color: #00cc33; border: none}')
+        self.b_turn_right.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.manualControlGridLayout.addWidget(self.b_turn_right,7,2,1,2)
+
+        ## Button TURN DOWN
+        self.b_turn_down = QPushButton("v")
+        self.b_turn_down.setStyleSheet('QPushButton {background-color: #00cc33; border: none}')
+        self.b_turn_down.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.manualControlGridLayout.addWidget(self.b_turn_down,8,0,1,4)
 
         ## Button Emergency break
         self.b_emergency_break = QPushButton("Emergency break")
-        self.manualControlGridLayout.addWidget(self.b_emergency_break,7,0,1,2)
-        
+        self.b_emergency_break.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.b_emergency_break.setStyleSheet('QPushButton {background-color: #cc0000; border: none}')
+        self.manualControlGridLayout.addWidget(self.b_emergency_break,9,0,1,4)
         self.manualGroupBox.setLayout(self.manualControlGridLayout)
         
         return self.manualGroupBox
@@ -182,14 +265,20 @@ class MainWindow(QDialog):
     # @return self.logGroupBox. This is the groupbox containing the Log window widgets.
     def createLogWindow(self):
         self.logGridLayout = QGridLayout()
-        self.logGroupBox = QGroupBox("Logger")
+        self.logGroupBox = QGroupBox()
         self.logGroupBox.setStyleSheet("color: #000000;")
+
+        ## label of QGroupbox content
+        self.gb_label = QLabel("Debug information")
+        self.gb_label.setStyleSheet('QLabel {color: #ffffff; font-weight: bold}')
+        self.gb_label.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.logGridLayout.addWidget(self.gb_label,0,0,1,1, Qt.AlignHCenter)  
 
         ## Logger screen widget (QPlainTextEdit)
         self.log = QPlainTextEdit()
         self.log.setReadOnly(True)
         self.log.setStyleSheet("background-color: #AAAAAA;")
-        self.logGridLayout.addWidget(self.log,0,0)
+        self.logGridLayout.addWidget(self.log,1,0,1,1)
 
         self.logGroupBox.setLayout(self.logGridLayout)
 
@@ -199,14 +288,20 @@ class MainWindow(QDialog):
     # @return self.videoGroupBox. This the groupbox containing the snapshot visualisation widgets.
     def createVideoWindow(self):
         self.videoGridLayout = QGridLayout()
-        self.videoGroupBox = QGroupBox("Video stream")
+        self.videoGroupBox = QGroupBox()
         self.videoGroupBox.setStyleSheet("color: #000000;")
+
+        ## label of QGroupbox content
+        self.gb_label = QLabel("Video stream")
+        self.gb_label.setStyleSheet('QLabel {color: #ffffff; font-weight: bold}')
+        self.gb_label.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.videoGridLayout.addWidget(self.gb_label,0,0,1,1, Qt.AlignHCenter)
 
         ## videoStream is a widget to display the snapshots
         self.videoStream = QPlainTextEdit()
         self.videoStream.setReadOnly(True)
         self.videoStream.setStyleSheet("background-color: #AAAAAA;")
-        self.videoGridLayout.addWidget(self.videoStream,0,0)
+        self.videoGridLayout.addWidget(self.videoStream,1,0)
 
         self.videoStream.appendPlainText("This will become a video stream widget.")
 
@@ -216,29 +311,29 @@ class MainWindow(QDialog):
     
     ## @brief MainWindow::wellInitialisation(self) declares and defines the wellpositions in millimeters of the specified targets using the batch initialisation file.
     def wellInitialisation(self):
-        ## Declare and define wellpositions in millimeters
+        ## Declare well map
         self.Well_Map = np.empty(
-            (int(self.settings_batch.value("Plate/columns")) + 1,
-            int(self.settings_batch.value("Plate/rows")) + 1, 2),
+            (int(self.settings_batch.value("Plate/rows")) + 1,
+            int(self.settings_batch.value("Plate/columns")) + 1, 2),
             dtype=object
         )
-
+        
         ## Position 00 on the wellplate derived from the calibration data
         self.Well_Map[0:][0:] = (
-            (float(self.settings_batch.value("Plate/posxA1"))),
-            (float(self.settings_batch.value("Plate/posyA1")))
+            (float(self.settings_batch.value("Plate/posColumn00"))),
+            (float(self.settings_batch.value("Plate/posRow00")))
         )
 
-        self.msg("Initialising well plate with " + str(self.Well_Map.shape[1]) + " rows and " + str(self.Well_Map.shape[0]) + " columns.")
+        self.msg("Initialising well plate with " + str(self.Well_Map.shape[0]) + " rows and " + str(self.Well_Map.shape[1]) + " columns.")
 
-        for row in range(1, self.Well_Map.shape[1], 1):
-            for column in range(1, self.Well_Map.shape[0], 1):
-                self.Well_Map[column][row] = (
-                    float(self.settings_batch.value("Plate/posxA1")) + ((column-1) * float(self.settings_batch.value("Plate/deltaxWell"))),
-                    float(self.settings_batch.value("Plate/posyA1")) + ((row-1) * float(self.settings_batch.value("Plate/deltayWell")))
+        ## Fill Well_Map with well positions in mm based on the distances of batch.ini
+        for row in range(1, self.Well_Map.shape[0], 1):
+            for column in range(1, self.Well_Map.shape[1], 1):
+                self.Well_Map[row][column] = (
+                    float(self.settings_batch.value("Plate/posColumnA1")) + ((column-1) * float(self.settings_batch.value("Plate/deltaColumnWell"))),
+                    float(self.settings_batch.value("Plate/posRowA1")) + ((row-1) * float(self.settings_batch.value("Plate/deltaRowWell")))
                 )
-                print(self.Well_Map[column][row])
-
+                
         ## load the wells to process
         self.settings_batch.beginReadArray("Wells")
         Well_KeyList = self.settings_batch.childKeys()
@@ -256,13 +351,6 @@ class MainWindow(QDialog):
             index = index+1
         print("Well targets: ")
         print(self.Well_Targets)
-        return
-    
-    ## @brief MainWindow::LogWindowInsert(self, message) appends the message to the log window. This is a slot function called when a signal message is emitted from any class which uses the message signal. This Slot is connected which each class which uses this signal.
-    # @param message is the message to be displayed.
-    @Slot(str)
-    def LogWindowInsert(self, message):
-        self.log.appendPlainText(str(message) + "\n")
         return
 
     ## @brief MainWindow::openSettingsIniFile(self) opens the initialisation file with the technical settings of the device.
@@ -311,17 +399,20 @@ if __name__ == '__main__':
     
     ## Signal slot connections
     mwi.b_firmware_restart.clicked.connect(steppers.firmwareRestart)
+    mwi.b_stm_read.clicked.connect(steppers.PrintHAT_serial.readPort)
     #mwi.b_start_batch.clicked.connect(mwi.startBatch)
     #mwi.b_stop_batch.clicked.connect(mwi.stopBatch)
     mwi.b_doxygen.clicked.connect(mwi.doxygen)
     mwi.b_home_x.clicked.connect(steppers.homeXY)
+    mwi.b_get_pos.clicked.connect(steppers.getPositionFromSTM)
     mwi.b_turn_up.clicked.connect(steppers.turnUp)
     mwi.b_turn_left.clicked.connect(steppers.turnLeft)
     mwi.b_turn_right.clicked.connect(steppers.turnRight)
     mwi.b_turn_down.clicked.connect(steppers.turnDown)
     mwi.b_gotoXY.clicked.connect(lambda: steppers.gotoXY(mwi.x_pos.text(), mwi.y_pos.text()))
     mwi.b_emergency_break.clicked.connect(steppers.emergencyBreak)
-    mwi.b_goto_well.clicked.connect(lambda: stepper_well_positioning.goto_well(10, 10))
+    mwi.b_goto_well.clicked.connect(lambda: stepper_well_positioning.goto_well(mwi.Well_Map[mwi.row_well_combo_box.currentIndex()][1][1], 
+                                                                               mwi.Well_Map[1][mwi.column_well_combo_box.currentIndex()][0]))
 
     mwi.message.sig.connect(mwi.LogWindowInsert)
     steppers.PrintHAT_serial.message.sig.connect(mwi.LogWindowInsert)

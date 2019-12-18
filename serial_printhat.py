@@ -6,6 +6,7 @@ import serial
 import signal
 
 from PySide2.QtWidgets import *
+from PySide2.QtCore import QTimer, QEventLoop
 
 ## @brief class GcodeSerial handles the /tmp/printer pseudoserial connection and writes incoming G-code. It also reads responses of the serial port.
 class GcodeSerial:
@@ -61,7 +62,7 @@ class GcodeSerial:
         print("\nDEBUG: in function ser_comm::connect(port)")
         try:
             ## @param self.serial is the serial instance.
-            self.serial = serial.Serial(port, timeout=3.0)
+            self.serial = serial.Serial(port, timeout=1.0)
 
             ## Open the serial port if it is not opened already.
             if not self.serial.is_open:
@@ -77,23 +78,37 @@ class GcodeSerial:
     # @param gcode_string is the string to be written to the serial port.
     # @todo Check connection state at a G-code write.
     def executeGcode(self, gcode_string):
-        try:
-            gcode_byte_array = bytearray(gcode_string, 'utf-8')
-            self.serial.write(gcode_byte_array)
-        except Exception as e:
-            self.msg(e)
+        if self.getConnectionState():
+            try:
+                gcode_byte_array = bytearray(gcode_string, 'utf-8')
+                self.serial.write(gcode_byte_array)
+            except Exception as e:
+                self.msg(e)
+        else:
+            self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
         return
 
     ## @brief Gcode_serial::readPort(self) reads data from port while port is not empty with a timeout of x seconds (which is initialised in the Gcode_serial::__init__ function).
     # @return data is the read data from the port.
     # @todo Make a signal triggered read action.
     def readPort(self):
+        self.msg("Please wait, reading data from STM...")
         print("\nDEBUG: in function ser_comm::readPort()")
+        self.wait_ms(1)
         data = self.serial.readline()
-        no_bytes_left = self.serial.inWaiting
-        if no_bytes_left:
+        bytes_left = self.serial.inWaiting
+        if bytes_left:
             data += self.serial.readline()
+        self.msg(data)
         return data
+
+    ## @brief Gcode_serial::wait_ms(self, milliseconds) is a delay function.
+    ## @param milliseconds is the number of milliseconds to wait.
+    def wait_ms(self, milliseconds):
+        GeneralEventLoop = QEventLoop()
+        QTimer.singleShot(milliseconds, GeneralEventLoop.exit)
+        GeneralEventLoop.exec_()
+        return
 
     ## @brief Gcode_serial::disconnect stops the motors and the klipper service and then disconnects from pseudo serial port /tmp/printer.
     def disconnect(self):
