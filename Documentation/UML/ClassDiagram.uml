@@ -7,52 +7,66 @@ title Well plate reader - class diagram
 'class MainWindow 
 
 '-------------------------------------------------------------main.py
-package main.py #BBBBBB {
-class MainWindow(QDialog) #FF5555  {
-	+ checkIO(std::vector<uint8_t> &data): \nstd::vector<uint8_t>
-}
+
+package main.py #AAAAAA {
+	class MainWindow #FF5555  {
+		+ message: signalCommunication()
+		+ settings = QSettings
+		+ settings_batch = QSettings
+		+ Well_Map: numpy.array
+		+ Well_Targets: numpy.array
+		+ __init__(self)
+		+ msg(self, message)
+		+ <Slot> LogWindowInsert(self, message)
+		+ createBatchGroupBox(self): self.batchGroupBox
+		+ createManualGroupBox(self): self.manualGroupBox
+		+ createLogWindow(self): self.logGroupBox
+		+ createVideoWindow(self): self.videoGroupBox
+		+ wellInitialisation(self)
+		+ openSettingsIniFile(self)
+		+ openBatchIniFile(self)
+		+ doxygen(self)
+	}
 }
 
+'-------------------------------------------------------------signal.py
+package signal.py #AAAAAA {
+	class signalCommunication #FF5555 {
+		+ sig: Signal(str)
+	}
+}
+
+'-------------------------------------------------------------serial_printhat.py
+package serial_printhat.py #AAAAAA {
+	class GcodeSerial #ffff55 {
+		+ message: signalCommunication()
+		+ ins: int
+		+ connectionState: bool
+		+ __init__(self)
+		+ msg(self, message)
+	}
+}
 
 '-------------------------------------------------------------
 package stepper.py #AAAAAA {
-		
-class signalCommunication #FF5555
+	class StepperControl #55FF55 {
+		+ message: signalCommunication()
+		+ msg(self, message)
+	}
 
-class StepperControl #55FF55
-
-class StepperWellpositioning #5555FF
+	class StepperWellPositioning #5555FF {
+		+ message: signalCommunication()
+		+ msg(self, message)
+	}	
 }
 
 '-------------------------------------------------------------Communication
 
 '-------------------------------------------------------------arrows
-'main *-down- " 1 " IOControl
-'main *-left-- " 1 " RoombaMQTT
-'main *-down- " 1 " SerialLink
-'main *-right- " 2 " Dataframe
-
-'----arrows sensehat
-
-'SenseHAT *-down- "1 " Joystick
-'SenseHAT *-down- "1 " LedMatrix
-'LedMatrix -down-> "64 " Pixel
-
-'----arrows package PositionControl
-
-'RotationMotor -down-* Pilot : "2" " "
-'Device  <|-right- RotationMotor
-
-'----arrows package Roomba
-
-'IOControl *--down- " 1 " ObstacleDetector
-'IOControl *--down- " 1 " Pilot
-'IOControl *-down- " 1 " BatteryChecker
-
-'----arrows package communication
-'CommandProcessor <|-down- RoombaMQTT
-'SenseHAT -down-* " 1 " RoombaMQTT
-'ParLoop -left-* " 1 " RoombaMQTT
-'MosquittoPP <|-down- CommandProcessor 
+StepperControl -down-* " 1 " StepperWellPositioning
+signalCommunication -right-* " 1 " StepperControl
+signalCommunication -right-* " 1 " StepperWellPositioning
+signalCommunication -right-* " 1 " MainWindow
+GcodeSerial -down-* StepperControl
 
 @enduml	
