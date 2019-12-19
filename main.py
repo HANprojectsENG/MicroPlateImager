@@ -99,25 +99,25 @@ class MainWindow(QDialog):
 
         ## Button FIRMWARE_RESTART
         self.b_firmware_restart = QPushButton("FIRMWARE_RESTART")
-        self.b_firmware_restart.setStyleSheet('QPushButton {background-color: #ffff33; border: none}')
+        self.b_firmware_restart.setStyleSheet('QPushButton {background-color: #AAAAAA; border: none}')
         self.b_firmware_restart.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
         self.processControlGridLayout.addWidget(self.b_firmware_restart,1,0,1,1)
 
         ## Button Read STM buffer
         self.b_stm_read = QPushButton("STM READ")
-        self.b_stm_read.setStyleSheet('QPushButton {background-color: #ffff33; border: none}')
+        self.b_stm_read.setStyleSheet('QPushButton {background-color: #AAAAAA; border: none}')
         self.b_stm_read.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
         self.processControlGridLayout.addWidget(self.b_stm_read,1,1,1,1)
 
         ## Button START BATCH
         self.b_start_batch = QPushButton("START BATCH")
-        self.b_start_batch.setStyleSheet('QPushButton {background-color: #9083f0; border: none}')
+        self.b_start_batch.setStyleSheet('QPushButton {background-color: #AAAAAA; border: none}')
         self.b_start_batch.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
         self.processControlGridLayout.addWidget(self.b_start_batch,2,0,1,2)
 
         ## Button STOP BATCH
         self.b_stop_batch = QPushButton("STOP BATCH")
-        self.b_stop_batch.setStyleSheet('QPushButton {background-color: #9083f0; border: none}')
+        self.b_stop_batch.setStyleSheet('QPushButton {background-color: #AAAAAA; border: none}')
         self.b_stop_batch.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
         self.processControlGridLayout.addWidget(self.b_stop_batch,3,0,1,2)
 

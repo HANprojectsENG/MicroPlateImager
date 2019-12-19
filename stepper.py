@@ -31,7 +31,7 @@ class StepperControl():
 
     def getPositionFromSTM(self):
         if self.PrintHAT_serial.getConnectionState():
-            self.msg("Retrieving position from STM microcontroller")
+            self.msg("Retrieving position from STM microcontroller...")
             gcode_string = "M114\r\n"
             self.PrintHAT_serial.executeGcode(gcode_string)
             self.PrintHAT_serial.readPort()
