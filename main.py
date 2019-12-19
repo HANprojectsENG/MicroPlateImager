@@ -9,9 +9,15 @@ import stepper
 import signal
 import numpy as np
 import array
+
 from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit, QFileDialog, QComboBox, QSizePolicy
 from PySide2.QtGui import QFont, QColor, QPalette
 from PySide2.QtCore import QSettings, Signal, Slot, Qt
+
+from lib.PiCam import *
+from lib.ImageProcessing import *
+
+current_milli_time = lambda: int(round(time.time() * 1000))
 
 ## @brief MainWindow(QDialog) instantiates a main window. It consists of a manual control groupbox in which the user can control the steppers of the plate reader manually. Furthermore a groupbox with batch control widgets is created. A groupbox with log window provides runtime debug information. A groupbox with a camerastream widget shows the snapshots created by the well.
 ## @param QDialog is used as the window is a user interactive GUI.
@@ -121,11 +127,17 @@ class MainWindow(QDialog):
         self.b_stop_batch.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
         self.processControlGridLayout.addWidget(self.b_stop_batch,3,0,1,2)
 
+        ## Button Snapshot. 
+        self.b_snapshot = QPushButton("Snapshot")
+        self.b_snapshot.setStyleSheet('QPushButton {background-color: #AAAAAA; border: none}')
+        self.b_snapshot.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.processControlGridLayout.addWidget(self.b_snapshot,4,0,1,2)
+
         ## Button Doxygen. Creates and opens Doxygen documentation
         self.b_doxygen = QPushButton("Doxygen")
         self.b_doxygen.setStyleSheet('QPushButton {background-color: #ffa500; border: none}')
         self.b_doxygen.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
-        self.processControlGridLayout.addWidget(self.b_doxygen,4,0,1,2)
+        self.processControlGridLayout.addWidget(self.b_doxygen,5,0,1,2)
 
         self.batchGroupBox.setLayout(self.processControlGridLayout)
 
@@ -352,7 +364,7 @@ class MainWindow(QDialog):
         print("Well targets: ")
         print(self.Well_Targets)
         return
-
+    
     ## @brief MainWindow::openSettingsIniFile(self) opens the initialisation file with the technical settings of the device.
     def openSettingsIniFile(self):
         print("\nDEBUG: in function MainWindow::openSettingsIniFile()")
@@ -371,6 +383,36 @@ class MainWindow(QDialog):
     def doxygen(self):
         os.system("cd Documentation && if [ -d ""html"" ]; then rm -r html; fi && cd ../ && doxygen Documentation/Doxyfile && chromium-browser ./Documentation/html/index.html")
         self.msg("Generated Doxygen documentation")
+        return
+
+## @brief WellReader is the class which handles the image snapshot recording and processing
+class WellReader():
+    message = signal.signalClass()
+    capture = None ## @param capture contains the capture image
+
+    ## @brief WellReader::__init__() initialises the variables and instances
+    def __init__(self):
+        self.msg("Initialisation of class WellReader")
+        return
+
+    ## @brief WellReader()::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
+    ## @param message is the string message to be emitted.
+    def msg(self, message):
+        if message is not None:
+            self.message.sig.emit(self.__class__.__name__ + ": " + str(message))
+        return
+    
+    ## @brief MainWindow::reader(self) takes snapshots
+    @Slot()
+    def reader(self):
+        if not (self.capture is None):
+            if not os.path.exists("snapshots"):
+                print("Generating snapshots directory")
+                os.mkdir("snapshots")
+            filename = 'snapshots/Reader_Snapshot' + str(current_milli_time()) + '.png'
+            print("filename: " + str(filename))
+            self.msg(filename)
+            cv2.imwrite(filename, self.capture)
         return
 
 ################################ MAIN APPLICATION ################################
@@ -396,12 +438,16 @@ if __name__ == '__main__':
     
     ## @param stepper_well_positioning is the positioning instance of the wells making use of the steppers control class.
     stepper_well_positioning = stepper.StepperWellPositioning(steppers)
+
+    ## @param snapshot is the class instance of Reader
+    snapshot = WellReader()
     
     ## Signal slot connections
     mwi.b_firmware_restart.clicked.connect(steppers.firmwareRestart)
     mwi.b_stm_read.clicked.connect(steppers.PrintHAT_serial.readPort)
     #mwi.b_start_batch.clicked.connect(mwi.startBatch)
     #mwi.b_stop_batch.clicked.connect(mwi.stopBatch)
+    mwi.b_snapshot.clicked.connect(lambda: snapshot.reader())
     mwi.b_doxygen.clicked.connect(mwi.doxygen)
     mwi.b_home_x.clicked.connect(steppers.homeXY)
     mwi.b_get_pos.clicked.connect(steppers.getPositionFromSTM)

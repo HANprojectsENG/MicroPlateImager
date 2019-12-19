@@ -53,7 +53,6 @@ class StepperControl():
     ## @param x_pos is the new position of the X-axis which is set.
     def setPositionX(self, x_pos):
         self.position_x = float(x_pos)
-        self.msg("New XY-position: " + str(self.position_x) + ", " + str(self.position_y))
         return
 
     ## @brief StepperControl::setPositionY(self) sets the position of the Y-axis
