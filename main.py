@@ -26,6 +26,7 @@ current_milli_time = lambda: int(round(time.time() * 1000))
 class MainWindow(QDialog):
     message = signal.signalClass() # message signal
 
+    closing = signal.signalClass() # window closing signal
     settings = None
     settings_batch = None
     Well_Map = None
@@ -385,6 +386,11 @@ class MainWindow(QDialog):
         self.msg("Generated Doxygen documentation")
         return
 
+    def closeEvent(self, event):
+        self.closing.windowClosing.emit()
+        event.accept()
+        return
+
 ## @brief WellReader is the class which handles the image snapshot recording and processing
 class WellReader():
     message = signal.signalClass()
@@ -464,13 +470,16 @@ if __name__ == '__main__':
     use_video_port=bool(mwi.settings.value("Camera/use_video_port")))
 
     ## @param Enhancer_Capture is the image processing thread
-    Enhancer_Capture = ImgEnhancer()
-    Enhancer_Capture.start()
-    Cam_Capturestream.start(QThread.HighPriority)
+    #Enhancer_Capture = ImgEnhancer()
+    #Enhancer_Capture.start()
+    #Cam_Capturestream.start(QThread.HighPriority)
 
     ## @param snapshot is the class instance of Reader
     snapshot = WellReader()
     
+    ## @param Thread_List is a list with all threads
+    #Thread_List = [Enhancer_Capture, Cam_Capturestream]
+
     ## Signal slot connections
     mwi.b_firmware_restart.clicked.connect(steppers.firmwareRestart)
     mwi.b_stm_read.clicked.connect(steppers.PrintHAT_serial.readPort)
@@ -494,7 +503,19 @@ if __name__ == '__main__':
     steppers.message.sig.connect(mwi.LogWindowInsert)
     stepper_well_positioning.message.sig.connect(mwi.LogWindowInsert)
 
+    ## All objects and threads have been instantiated and connected, connect the closing slots
+    ## for a gracefull shutdown of the application upon window closing.
+    ## @todo understand: Recipes invoked when MainWindow is closed, note that scheduler stops other threads.
+    #for Thread in Thread_List:
+    #    mwi.closing.windowClosing.connect(Thread.close)
+
     ret = app.exec_()
+
+    ## Wait for one second for each thread to exit.
+    #for Thread in Thread_List:
+    #    if Thread is not None:
+    #        print(Thread)
+    #        Thread.wait(1000)
 
     # stops the motors and disconnects from pseudo serial link /tmp/printer at exit
     steppers.PrintHAT_serial.disconnect()

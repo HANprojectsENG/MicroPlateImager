@@ -98,6 +98,7 @@ class PiVideoStream(QThread):
 
     @Slot()
     def close(self):
+        print("Closing pivideostream")
         self.pause = True
         self.fps.stop()
         self.exit(0)
