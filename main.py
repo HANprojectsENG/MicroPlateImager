@@ -12,7 +12,7 @@ import array
 
 from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit, QFileDialog, QComboBox, QSizePolicy
 from PySide2.QtGui import QFont, QColor, QPalette
-from PySide2.QtCore import QSettings, Signal, Slot, Qt
+from PySide2.QtCore import QSettings, Signal, Slot, Qt, QThread
 
 from lib.PiCam import *
 from lib.ImageProcessing import *
@@ -388,11 +388,12 @@ class MainWindow(QDialog):
 ## @brief WellReader is the class which handles the image snapshot recording and processing
 class WellReader():
     message = signal.signalClass()
-    capture = None ## @param capture contains the capture image
+    capture = None ## @param capture contains the captured image
+    captureRaw = None ## @param captureRaw contains the raw captured image
 
     ## @brief WellReader::__init__() initialises the variables and instances
     def __init__(self):
-        self.msg("Initialisation of class WellReader")
+        print("Initialisation of class WellReader")
         return
 
     ## @brief WellReader()::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
@@ -402,7 +403,7 @@ class WellReader():
             self.message.sig.emit(self.__class__.__name__ + ": " + str(message))
         return
     
-    ## @brief MainWindow::reader(self) takes snapshots
+    ## @brief WellReader::reader(self) takes snapshots
     @Slot()
     def reader(self):
         if not (self.capture is None):
@@ -414,6 +415,24 @@ class WellReader():
             self.msg(filename)
             cv2.imwrite(filename, self.capture)
         return
+
+    ## @brief WellReader::capUpdate(self, image=None) updates the image when a new one is available and emits a captureUpdated signal.
+    ## @param image is the new captured image.
+    ## @todo implement captureUpdated signal.
+    @Slot(np.ndarray)
+    def capUpdate(self, image=None):
+        if not (image is None):
+            self.capture = image
+            #self.captureUpdated.emit()
+
+    ## @brief WellReader::capRawUpdate(self, image=None) updates the image when a new one is available and emits a captureRawUpdated signal.
+    ## @param image is the new captured raw image.
+    ## @todo implement captureRawUpdated signal.
+    @Slot(np.ndarray)
+    def capUpdate(self, image=None):
+        if not (image is None):
+            self.captureRaw = image
+            #self.captureRawUpdated.emit()
 
 ################################ MAIN APPLICATION ################################
 ## @brief main application of the well plate reader system. Instantiates the MainWindow().
@@ -438,6 +457,16 @@ if __name__ == '__main__':
     
     ## @param stepper_well_positioning is the positioning instance of the wells making use of the steppers control class.
     stepper_well_positioning = stepper.StepperWellPositioning(steppers)
+
+    ## @param Cam_Capturestream
+    Cam_Capturestream = PiVideoStream(resolution=(int(mwi.settings.value("Camera/width")), int(mwi.settings.value("Camera/height"))),
+    monochrome=True, framerate=int(mwi.settings.value("Camera/framerate")), effect='blur',
+    use_video_port=bool(mwi.settings.value("Camera/use_video_port")))
+
+    ## @param Enhancer_Capture is the image processing thread
+    Enhancer_Capture = ImgEnhancer()
+    Enhancer_Capture.start()
+    Cam_Capturestream.start(QThread.HighPriority)
 
     ## @param snapshot is the class instance of Reader
     snapshot = WellReader()
