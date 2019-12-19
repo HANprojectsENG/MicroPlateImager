@@ -44,14 +44,14 @@ class GcodeSerial:
             self.message.sig.emit(self.__class__.__name__ + ": " + str(message))
         return
     
-    ## @brief GcodeSerial::getconnection_state(self) is a connection_state getter.
+    ## @brief GcodeSerial::getConnectionState(self) is a self.connection_state getter.
     # @return self.connection_state
-    def getconnection_state(self):
+    def getConnectionState(self):
         return self.connection_state
 
-    ## @brief GcodeSerial::setconnection_state(self, conState) is a setter which sets the new connection_state value of the instance
+    ## @brief GcodeSerial::setConnectionState(self, conState) is a setter which sets the new connection_state value of the instance
     # @param conState is the boolean value of the new state
-    def setconnection_state(self, conState):
+    def setConnectionState(self, conState):
         self.connection_state = conState
         return
 
@@ -69,7 +69,7 @@ class GcodeSerial:
                 print("\nERROR: Cannot connect to device on port {}".format(port))
             else:
                 print("\nDEBUG: Opened serial communication on port {}".format(port))
-                self.setconnection_state(True)
+                self.setConnectionState(True)
         except Exception as e:
             print("Exception in Ser_comm::connect(self, port)", e)
         return
@@ -78,7 +78,7 @@ class GcodeSerial:
     # @param gcode_string is the string to be written to the serial port.
     # @todo Check connection state at a G-code write.
     def executeGcode(self, gcode_string):
-        if self.getconnection_state():
+        if self.getConnectionState():
             try:
                 gcode_byte_array = bytearray(gcode_string, 'utf-8')
                 self.serial.write(gcode_byte_array)
@@ -124,7 +124,7 @@ class GcodeSerial:
             os.system('sudo service klipper stop && sudo service klipper status')
         
             ## Disconnect if connection is true
-            if self.getconnection_state():
+            if self.getConnectionState():
                 self.serial.close()
             else:
                 print("No connection to be closed\n")
