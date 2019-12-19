@@ -16,8 +16,8 @@ class GcodeSerial:
     ## @param ins is the number of instances created of GcodeSerial. This may not exceed 1.
     ins = 0
     
-    ## @param connectionState is the boolean state of the serial interface.
-    connectionState = False
+    ## @param connection_state is the boolean state of the serial interface.
+    connection_state = False
 
     ## @brief GcodeSerial::__init__ creates a serial instance and checks if no more than one instance is created.
     # Furthermore it restarts the klipper service in order to make sure this service is not exited due to unexpected crashes of the window.
@@ -44,15 +44,15 @@ class GcodeSerial:
             self.message.sig.emit(self.__class__.__name__ + ": " + str(message))
         return
     
-    ## @brief GcodeSerial::getConnectionState(self) is a connectionState getter.
-    # @return self.connectionState
-    def getConnectionState(self):
-        return self.connectionState
+    ## @brief GcodeSerial::getconnection_state(self) is a connection_state getter.
+    # @return self.connection_state
+    def getconnection_state(self):
+        return self.connection_state
 
-    ## @brief GcodeSerial::setConnectionState(self, conState) is a setter which sets the new connectionstate value of the instance
+    ## @brief GcodeSerial::setconnection_state(self, conState) is a setter which sets the new connection_state value of the instance
     # @param conState is the boolean value of the new state
-    def setConnectionState(self, conState):
-        self.connectionState = conState
+    def setconnection_state(self, conState):
+        self.connection_state = conState
         return
 
     ## @brief GcodeSerial::connect connects to the pseudo serial port /tmp/printer. This port is the link with the klipper library which handles all the g-code and communication with the STM microcontroller.
@@ -69,7 +69,7 @@ class GcodeSerial:
                 print("\nERROR: Cannot connect to device on port {}".format(port))
             else:
                 print("\nDEBUG: Opened serial communication on port {}".format(port))
-                self.setConnectionState(True)
+                self.setconnection_state(True)
         except Exception as e:
             print("Exception in Ser_comm::connect(self, port)", e)
         return
@@ -78,7 +78,7 @@ class GcodeSerial:
     # @param gcode_string is the string to be written to the serial port.
     # @todo Check connection state at a G-code write.
     def executeGcode(self, gcode_string):
-        if self.getConnectionState():
+        if self.getconnection_state():
             try:
                 gcode_byte_array = bytearray(gcode_string, 'utf-8')
                 self.serial.write(gcode_byte_array)
@@ -111,6 +111,7 @@ class GcodeSerial:
         return
 
     ## @brief Gcode_serial::disconnect stops the motors and the klipper service and then disconnects from pseudo serial port /tmp/printer.
+    ## @todo stop running eventloops 
     def disconnect(self):
         print("\nDEBUG: in function ser_comm::disconnect()")
         try:
@@ -123,9 +124,10 @@ class GcodeSerial:
             os.system('sudo service klipper stop && sudo service klipper status')
         
             ## Disconnect if connection is true
-            if self.getConnectionState():
+            if self.getconnection_state():
                 self.serial.close()
             else:
                 print("No connection to be closed\n")
         except Exception as e:
             print("exeption on serial disconnect: \n", e)
+        return

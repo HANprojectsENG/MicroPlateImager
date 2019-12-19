@@ -77,6 +77,7 @@ class StepperControl():
 
     ## @brief StepperControl::gotoX(self, pos) creates and executes a move G-code string for the X-axis.
     ## @param x_pos is the desired position
+    ## @depricated this function is not in use
     def gotoX(self, x_pos):
         if self.PrintHAT_serial.getConnectionState():
             gcode_string = "G0 X" 
@@ -90,6 +91,7 @@ class StepperControl():
 
     ## @brief StepperControl::gotoY(self, pos) creates and executes a move G-code string for the Y-axis.
     ## @param y_pos is the desired position
+    ## @depricated this function is not in use
     def gotoY(self, y_pos):
         if self.PrintHAT_serial.getConnectionState():
             gcode_string = "G0 Y" 

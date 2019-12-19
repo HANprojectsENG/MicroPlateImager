@@ -10,14 +10,12 @@ title Well plate reader - class diagram
 
 package main.py #AAAAAA {
 	class MainWindow #FF5555  {
-		+ message: signalCommunication()
 		+ settings = QSettings
 		+ settings_batch = QSettings
 		+ Well_Map: numpy.array
 		+ Well_Targets: numpy.array
 		+ __init__(self)
 		+ msg(self, message)
-		+ <Slot> LogWindowInsert(self, message)
 		+ createBatchGroupBox(self): self.batchGroupBox
 		+ createManualGroupBox(self): self.manualGroupBox
 		+ createLogWindow(self): self.logGroupBox
@@ -25,38 +23,91 @@ package main.py #AAAAAA {
 		+ wellInitialisation(self)
 		+ openSettingsIniFile(self)
 		+ openBatchIniFile(self)
+		'
+		--Signals--
+		+ message: signalCommunication
+		'
+		--Slots--
+		+ LogWindowInsert(self, message)
 		+ doxygen(self)
+
 	}
 }
 
 '-------------------------------------------------------------signal.py
 package signal.py #AAAAAA {
 	class signalCommunication #FF5555 {
-		+ sig: Signal(str)
+		+ sig: Signal
 	}
 }
 
 '-------------------------------------------------------------serial_printhat.py
 package serial_printhat.py #AAAAAA {
 	class GcodeSerial #ffff55 {
-		+ message: signalCommunication()
 		+ ins: int
 		+ connectionState: bool
 		+ __init__(self)
 		+ msg(self, message)
+		+ getConnectionState(self): self.connectionState
+		+ setConnectionState(self, conState)
+		+ connect(self, port)
+		+ executeGcode(self, gcode_string)
+		+ readPort(self)
+		+ wait_ms(self, milliseconds)
+		+ disconnect(self)
+		'
+		--Signals--
+		+ message: signalCommunication
 	}
 }
 
 '-------------------------------------------------------------
 package stepper.py #AAAAAA {
 	class StepperControl #55FF55 {
-		+ message: signalCommunication()
+		- self.position_x: float
+		- self.position_y: float
+		+__init__(self)
 		+ msg(self, message)
+		+ getPositionX(self): self.position_x
+		+ getPositionY(self): self.position_y
+		+ setPositionX(self, x_pos)
+		+ setPositionY(self, y_pos)
+		+ <depricated> gotoX(self, x_pos)
+		+ <depricated> gotoY(self, y_pos)
+		'
+		--Signals--
+		+ message: signalCommunication
+		'
+		--Slots--
+		+ getPositionFromSTM(self)
+		+ homeXY(self)
+		+ gotoXY(self, x_pos, y_pos)
+		+ turnUp(self)
+		+ turnLeft(self)
+		+ turnRight(self)
+		+ turnDown(self)
+		+ firmwareRestart(self)
+		+ emergencyBreak(self)
 	}
 
 	class StepperWellPositioning #5555FF {
-		+ message: signalCommunication()
+		+ stepper_control: StepperControl
+		+ current_well_row: int
+    	+ current_well_column: int
+		+ GeneralEventLoop: QEventLoop
+		+ __init__(self, steppers)
 		+ msg(self, message)
+		+ reset_current_well(self)
+		+ set_current_well(self, column, row)
+		+ get_current_well(self): self.current_well_column, self.current_well_row
+		+ wait_ms(self, milliseconds)
+		'
+		--Signals--
+		+ message: signalCommunication
+		'
+		--Slots--
+		+ goto_well(self, row, column)
+		
 	}	
 }
 
