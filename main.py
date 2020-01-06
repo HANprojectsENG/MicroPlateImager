@@ -10,8 +10,8 @@ import signal
 import numpy as np
 import array
 
-from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit, QFileDialog, QComboBox, QSizePolicy
-from PySide2.QtGui import QFont, QColor, QPalette
+from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit, QFileDialog, QComboBox, QSizePolicy, QDoubleSpinBox, QGraphicsOpacityEffect, QGraphicsDropShadowEffect, QWidget
+from PySide2.QtGui import QFont, QColor, QPalette, QImage, QPixmap
 from PySide2.QtCore import QSettings, Signal, Slot, Qt, QThread
 
 from lib.PiCam import *
@@ -392,14 +392,60 @@ class MainWindow(QDialog):
         return
 
 ## @brief WellReader is the class which handles the image snapshot recording and processing
-class WellReader():
+class WellReader(QWidget):
     message = signal.signalClass()
+    preview = None ## @param preview contains the preview image
     capture = None ## @param capture contains the captured image
     captureRaw = None ## @param captureRaw contains the raw captured image
+    previewRaw = None ## @param previewRaw contains the raw preview image
+    previewUpdated = signal.signalClass()
+    captureUpdated = signal.signalClass()
+    previewRawUpdated = signal.signalClass()
+    captureRawUpdated = signal.signalClass()
+    DisplayTarget = None
+    DisplayWell = None
+    TranslucentWidget = QGraphicsOpacityEffect()
+    GlowEffect = QGraphicsDropShadowEffect()
 
     ## @brief WellReader::__init__() initialises the variables and instances
-    def __init__(self):
+    def __init__(self, parent=None):
+        super(WellReader, self).__init__(parent)
         print("Initialisation of class WellReader")
+        ## labels
+        self.PixImage = QLabel()
+        
+        ## Spinboxes for image  control
+        self.gammaSpinBox = QDoubleSpinBox(self)
+        self.gammaSpinBoxTitle = QLabel("gamma")
+        self.gammaSpinBoxTitle.setStyleSheet("QLabel {color : white;}")
+        self.gammaSpinBox.setMinimum(0.0)
+        self.gammaSpinBox.setMaximum(5.0)
+        self.gammaSpinBox.setSingleStep(0.1)
+        self.gammaSpinBox.setValue(1.0)
+        self.claheSpinBox = QDoubleSpinBox(self)
+        self.claheSpinBoxTitle = QLabel("clahe")
+        self.claheSpinBoxTitle.setStyleSheet("QLabel {color : white;}")
+        self.claheSpinBox.setMinimum(0.0)
+        self.claheSpinBox.setMaximum(10.0)
+        self.claheSpinBox.setSingleStep(0.1)
+        
+        ## Define and apply graphic effects for overlaying widgets
+        self.GlowEffect.setColor(QColor("#000000"))
+        self.GlowEffect.setBlurRadius(0)
+        self.GlowEffect.setOffset(1, 1)
+        self.TranslucentWidget.setOpacity(0.1)
+        self.gammaSpinBoxTitle.setGraphicsEffect(QGraphicsDropShadowEffect(self.GlowEffect))
+        self.claheSpinBoxTitle.setGraphicsEffect(QGraphicsDropShadowEffect(self.GlowEffect))
+        self.gammaSpinBoxTitle.setGraphicsEffect(QGraphicsOpacityEffect(self.TranslucentWidget))
+        self.claheSpinBoxTitle.setGraphicsEffect(QGraphicsOpacityEffect(self.TranslucentWidget))
+        self.gammaSpinBox.setGraphicsEffect(QGraphicsOpacityEffect(self.TranslucentWidget))
+        self.claheSpinBox.setGraphicsEffect(QGraphicsOpacityEffect(self.TranslucentWidget))
+        
+        ## Install event filter to make overlaying widgets opaque while hovering over
+        self.gammaSpinBoxTitle.installEventFilter(self)
+        self.claheSpinBoxTitle.installEventFilter(self)
+        self.gammaSpinBox.installEventFilter(self)
+        self.claheSpinBox.installEventFilter(self)
         return
 
     ## @brief WellReader()::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
@@ -422,6 +468,27 @@ class WellReader():
             cv2.imwrite(filename, self.capture)
         return
 
+    ## @todo commenting
+    @Slot(np.ndarray)
+    def prvUpdate(self, image=None):
+        if not (image is None):
+            self.preview = image
+            if len(image.shape) < 3:
+                image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB) ## convert to color image
+            if self.DisplayTarget is not None:
+                cv2.circle(image, (self.DisplayTarget[0], self.DisplayTarget[1]), self.DisplayTarget[2], (0,0,255), 1)
+            if self.DisplayWell is not None:
+                cv2.circle(image, (self.DisplayWell[0], self.DisplayWell[1]), self.DisplayWell[2], (255,0,0), 1)
+            height, width = image.shape[:2] ## get dimensions
+            qImage = QImage(image.data, width, height, width * 3, QImage.Format_RGB888) ## Convert from OpenCV to PixMap
+            self.PixImage.setPixmap(QPixmap(qImage))
+            self.PixImage.show()
+            self.gammaSpinBox.raise_()
+            self.claheSpinBoxTitle.raise_()
+            self.gammaSpinBox.raise_()
+            self.claheSpinBox.raise_()
+            self.previewUpdated.emit()
+
     ## @brief WellReader::capUpdate(self, image=None) updates the image when a new one is available and emits a captureUpdated signal.
     ## @param image is the new captured image.
     ## @todo implement captureUpdated signal.
@@ -429,16 +496,23 @@ class WellReader():
     def capUpdate(self, image=None):
         if not (image is None):
             self.capture = image
-            #self.captureUpdated.emit()
+            self.captureUpdated.imageUpdate.emit()
 
     ## @brief WellReader::capRawUpdate(self, image=None) updates the image when a new one is available and emits a captureRawUpdated signal.
     ## @param image is the new captured raw image.
     ## @todo implement captureRawUpdated signal.
     @Slot(np.ndarray)
-    def capUpdate(self, image=None):
+    def capRawUpdate(self, image=None):
         if not (image is None):
             self.captureRaw = image
-            #self.captureRawUpdated.emit()
+            self.captureRawUpdated.imageUpdate.emit()
+
+    ## @todo commenting
+    @Slot(np.ndarray)
+    def prvRawUpdate(self, image=None):
+        if not (image is None):
+            self.previewRaw = image
+            self.previewRawUpdated.imageUpdate.emit()
 
 ################################ MAIN APPLICATION ################################
 ## @brief main application of the well plate reader system. Instantiates the MainWindow().
@@ -465,27 +539,31 @@ if __name__ == '__main__':
     stepper_well_positioning = stepper.StepperWellPositioning(steppers)
 
     ## @param Cam_Capturestream
-    Cam_Capturestream = PiVideoStream(resolution=(int(mwi.settings.value("Camera/width")), int(mwi.settings.value("Camera/height"))),
-    monochrome=True, framerate=int(mwi.settings.value("Camera/framerate")), effect='blur',
-    use_video_port=bool(mwi.settings.value("Camera/use_video_port")))
+    Cam_Capturestream = PiVideoStream(resolution=(int(mwi.settings.value("Camera/width")), int(mwi.settings.value("Camera/height"))), monochrome=True, framerate=int(mwi.settings.value("Camera/framerate")), effect='blur', use_video_port=bool(mwi.settings.value("Camera/use_video_port")))
 
     ## @param Enhancer_Capture is the image processing thread
-    #Enhancer_Capture = ImgEnhancer()
-    #Enhancer_Capture.start()
-    #Cam_Capturestream.start(QThread.HighPriority)
+    Enhancer_Preview = ImgEnhancer()
+    Enhancer_Preview.start(QThread.HighPriority) ## GUI depends on this thread
+    Enhancer_Capture = ImgEnhancer()
+    Enhancer_Capture.start()
+    Cam_Capturestream.start(QThread.HighPriority)
 
-    ## @param snapshot is the class instance of Reader
-    snapshot = WellReader()
+    ## @param Well_Reader is the class instance of Reader
+    Well_Reader = WellReader()
     
-    ## @param Thread_List is a list with all threads
-    #Thread_List = [Enhancer_Capture, Cam_Capturestream]
+    ## @param Thread_List is a list containing all threads
+    Thread_List = [Enhancer_Preview, Enhancer_Capture]
+
+    Cam_Capturestream.PrvReady.connect(lambda: Enhancer_Preview.imgUpdate(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
+    Cam_Capturestream.PrvReady.connect(lambda: Well_Reader.prvRawUpdate(Cam_Capturestream.PreviewFrame))
+    Enhancer_Preview.ready.connect(lambda: Well_Reader.prvUpdate(Enhancer_Preview.image))
 
     ## Signal slot connections
     mwi.b_firmware_restart.clicked.connect(steppers.firmwareRestart)
     mwi.b_stm_read.clicked.connect(steppers.PrintHAT_serial.readPort)
     #mwi.b_start_batch.clicked.connect(mwi.startBatch)
     #mwi.b_stop_batch.clicked.connect(mwi.stopBatch)
-    mwi.b_snapshot.clicked.connect(lambda: snapshot.reader())
+    mwi.b_snapshot.clicked.connect(lambda: Well_Reader.reader())
     mwi.b_doxygen.clicked.connect(mwi.doxygen)
     mwi.b_home_x.clicked.connect(steppers.homeXY)
     mwi.b_get_pos.clicked.connect(steppers.getPositionFromSTM)
@@ -506,16 +584,16 @@ if __name__ == '__main__':
     ## All objects and threads have been instantiated and connected, connect the closing slots
     ## for a gracefull shutdown of the application upon window closing.
     ## @todo understand: Recipes invoked when MainWindow is closed, note that scheduler stops other threads.
-    #for Thread in Thread_List:
-    #    mwi.closing.windowClosing.connect(Thread.close)
+    for Thread in Thread_List:
+        mwi.closing.windowClosing.connect(Thread.close)
 
     ret = app.exec_()
 
     ## Wait for one second for each thread to exit.
-    #for Thread in Thread_List:
-    #    if Thread is not None:
-    #        print(Thread)
-    #        Thread.wait(1000)
+    for Thread in Thread_List:
+        if Thread is not None:
+            print(Thread)
+            Thread.wait(1000)
 
     # stops the motors and disconnects from pseudo serial link /tmp/printer at exit
     steppers.PrintHAT_serial.disconnect()
