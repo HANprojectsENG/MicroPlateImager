@@ -42,6 +42,7 @@ class MainWindow(QDialog):
 
         ## Load wells to process in batch from batch settings initialisation file and calculate the coordinates
         self.wellInitialisation()
+        self.Well_Scanner = Scanner()
 
         ## Overall gridlayout
         self.mainWindowLayout = QGridLayout()    
@@ -56,7 +57,7 @@ class MainWindow(QDialog):
         lgb = self.createLogWindow()
 
         ## @param is a groupbox with video stream window
-        vgb = self.createVideoWindow()
+        vgb = self.Well_Scanner.createVideoWindow()#self.createVideoWindow()
 
         ## Fill mainWindowLayout with the just created groupboxes in the mainWindowLayout gridlayout
         self.mainWindowLayout.addWidget(bgb,0,0)
@@ -88,6 +89,14 @@ class MainWindow(QDialog):
     @Slot(str)
     def LogWindowInsert(self, message):
         self.log.appendPlainText(str(message) + "\n")
+        return
+
+    ## @brief MainWindow::wait_ms(self, milliseconds) is a delay function.
+    ## @param milliseconds is the number of milliseconds to wait.
+    def wait_ms(self, milliseconds):
+        GeneralEventLoop = QEventLoop()
+        QTimer.singleShot(milliseconds, GeneralEventLoop.exit)
+        GeneralEventLoop.exec_()
         return
 
     ## @brief MainWindow::createBatchGroupBox(self) creates the groupbox and the widgets in it which are used for the batch control.
@@ -391,8 +400,9 @@ class MainWindow(QDialog):
         event.accept()
         return
 
-## @brief WellReader is the class which handles the image snapshot recording and processing
-class WellReader(QWidget):
+## @brief Scanner is the class which handles the image snapshot recording and processing
+class Scanner(QWidget):
+    status = signal.signalClass()
     message = signal.signalClass()
     preview = None ## @param preview contains the preview image
     capture = None ## @param capture contains the captured image
@@ -402,15 +412,16 @@ class WellReader(QWidget):
     captureUpdated = signal.signalClass()
     previewRawUpdated = signal.signalClass()
     captureRawUpdated = signal.signalClass()
+    prevClockTime = None
     DisplayTarget = None
     DisplayWell = None
     TranslucentWidget = QGraphicsOpacityEffect()
     GlowEffect = QGraphicsDropShadowEffect()
 
-    ## @brief WellReader::__init__() initialises the variables and instances
+    ## @brief Scanner::__init__() initialises the variables and instances
     def __init__(self, parent=None):
-        super(WellReader, self).__init__(parent)
-        print("Initialisation of class WellReader")
+        super(Scanner, self).__init__(parent)
+        print("Initialisation of class Scanner")
         ## labels
         self.PixImage = QLabel()
         
@@ -448,14 +459,40 @@ class WellReader(QWidget):
         self.claheSpinBox.installEventFilter(self)
         return
 
-    ## @brief WellReader()::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
+    ## @brief MainWindow::createVideoGroupBox(self) creates the groupbox and the widgets in it which are used for displaying vido widgets.
+    ## @return self.videoGroupBox. This the groupbox containing the snapshot visualisation widgets.
+    ## @todo commenting
+    def createVideoWindow(self):
+        self.videoGridLayout = QGridLayout()
+        self.videoGroupBox = QGroupBox()
+        self.videoGroupBox.setStyleSheet("color: #000000;")
+
+        ## label of QGroupbox content
+        self.gb_label = QLabel("Video stream")
+        self.gb_label.setStyleSheet('QLabel {color: #ffffff; font-weight: bold}')
+        self.gb_label.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.videoGridLayout.addWidget(self.gb_label,0,0,1,1, Qt.AlignHCenter)
+
+        ## videoStream is a widget to display the snapshots
+        #self.videoStream = QPlainTextEdit()
+        #self.videoStream.setReadOnly(True)
+        #self.videoStream.setStyleSheet("background-color: #AAAAAA;")
+        self.videoGridLayout.addWidget(self.PixImage,1,0)
+
+        #self.videoStream.appendPlainText("This will become a video stream widget.")
+
+        self.videoGroupBox.setLayout(self.videoGridLayout)
+
+        return self.videoGroupBox
+    
+    ## @brief Scanner()::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
     ## @param message is the string message to be emitted.
     def msg(self, message):
         if message is not None:
             self.message.sig.emit(self.__class__.__name__ + ": " + str(message))
         return
     
-    ## @brief WellReader::reader(self) takes snapshots
+    ## @brief Scanner::reader(self) takes snapshots
     @Slot()
     def reader(self):
         if not (self.capture is None):
@@ -487,9 +524,9 @@ class WellReader(QWidget):
             self.claheSpinBoxTitle.raise_()
             self.gammaSpinBox.raise_()
             self.claheSpinBox.raise_()
-            self.previewUpdated.emit()
+            self.previewUpdated.imageUpdate.emit()
 
-    ## @brief WellReader::capUpdate(self, image=None) updates the image when a new one is available and emits a captureUpdated signal.
+    ## @brief Scanner::capUpdate(self, image=None) updates the image when a new one is available and emits a captureUpdated signal.
     ## @param image is the new captured image.
     ## @todo implement captureUpdated signal.
     @Slot(np.ndarray)
@@ -498,7 +535,7 @@ class WellReader(QWidget):
             self.capture = image
             self.captureUpdated.imageUpdate.emit()
 
-    ## @brief WellReader::capRawUpdate(self, image=None) updates the image when a new one is available and emits a captureRawUpdated signal.
+    ## @brief Scanner::capRawUpdate(self, image=None) updates the image when a new one is available and emits a captureRawUpdated signal.
     ## @param image is the new captured raw image.
     ## @todo implement captureRawUpdated signal.
     @Slot(np.ndarray)
@@ -514,6 +551,15 @@ class WellReader(QWidget):
             self.previewRaw = image
             self.previewRawUpdated.imageUpdate.emit()
 
+    ## @todo commenting
+    @Slot()
+    def kickTimer(self):
+        clockTime = current_milli_time()
+        if self.prevClockTime is not None:
+            timeDiff = clockTime - self.prevClockTime
+            #self.status.imageUpdate.emit("Frame delay: " + " {:04d}".format(round(timeDiff)) + "ms")
+        self.prevClockTime = clockTime
+ 
 ################################ MAIN APPLICATION ################################
 ## @brief main application of the well plate reader system. Instantiates the MainWindow().
 # It connects to the /tmp/printer pseudo serial link. Instantiates StepperControl class for the XY movement control and the StepperWellPositioning class for positioning the wells under the camera.
@@ -547,23 +593,37 @@ if __name__ == '__main__':
     Enhancer_Capture = ImgEnhancer()
     Enhancer_Capture.start()
     Cam_Capturestream.start(QThread.HighPriority)
-
-    ## @param Well_Reader is the class instance of Reader
-    Well_Reader = WellReader()
     
     ## @param Thread_List is a list containing all threads
-    Thread_List = [Enhancer_Preview, Enhancer_Capture]
+    Thread_List = [Cam_Capturestream, Enhancer_Preview, Enhancer_Capture]
 
+    ## Connect video/image stream to processing Qt.BlockingQueuedConnection or QueueConnection?
     Cam_Capturestream.PrvReady.connect(lambda: Enhancer_Preview.imgUpdate(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
-    Cam_Capturestream.PrvReady.connect(lambda: Well_Reader.prvRawUpdate(Cam_Capturestream.PreviewFrame))
-    Enhancer_Preview.ready.connect(lambda: Well_Reader.prvUpdate(Enhancer_Preview.image))
+
+    ## Connect video/image stream to processing Qt.BlockingQueuedConnection or QueueConnection?
+    Cam_Capturestream.PrvReady.connect(lambda: mwi.Well_Scanner.prvRawUpdate(Cam_Capturestream.PreviewFrame))
+
+    ## Stream images to main window
+    Enhancer_Preview.ready.connect(lambda: mwi.Well_Scanner.prvUpdate(Enhancer_Preview.image))
+
+    ## Connect video/image stream to processing Qt.BlockingQueuedConnection or QueueConnection?
+    Cam_Capturestream.CapReady.connect(lambda: Enhancer_Capture.imgUpdate(Cam_Capturestream.CaptureFrame), type=Qt.BlockingQueuedConnection)
+
+    ## Connect video/image stream to processing Qt.BlockingQueuedConnection or QueueConnection?
+    Cam_Capturestream.CapReady.connect(lambda: mwi.Well_Scanner.capRawUpdate(Cam_Capturestream.CaptureFrame), type=Qt.BlockingQueuedConnection)
+
+    ## Stream images to main window
+    Enhancer_Capture.ready.connect(lambda: mwi.Well_Scanner.capUpdate(Enhancer_Capture.image), type=Qt.QueuedConnection)
+
+    ## Measure time delay
+    Cam_Capturestream.PrvReady.connect(mwi.Well_Scanner.kickTimer)
 
     ## Signal slot connections
     mwi.b_firmware_restart.clicked.connect(steppers.firmwareRestart)
     mwi.b_stm_read.clicked.connect(steppers.PrintHAT_serial.readPort)
     #mwi.b_start_batch.clicked.connect(mwi.startBatch)
     #mwi.b_stop_batch.clicked.connect(mwi.stopBatch)
-    mwi.b_snapshot.clicked.connect(lambda: Well_Reader.reader())
+    mwi.b_snapshot.clicked.connect(lambda: mwi.Well_Scanner.reader())
     mwi.b_doxygen.clicked.connect(mwi.doxygen)
     mwi.b_home_x.clicked.connect(steppers.homeXY)
     mwi.b_get_pos.clicked.connect(steppers.getPositionFromSTM)
@@ -580,12 +640,22 @@ if __name__ == '__main__':
     steppers.PrintHAT_serial.message.sig.connect(mwi.LogWindowInsert)
     steppers.message.sig.connect(mwi.LogWindowInsert)
     stepper_well_positioning.message.sig.connect(mwi.LogWindowInsert)
+    mwi.Well_Scanner.message.sig.connect(mwi.LogWindowInsert)
+
+    #for Thread in Thread_List:
+    #    Thread.message.connect(mwi.LogWindowInsert)
+    #Enhancer_Preview.message.disconnect(mwi.LogWindowInsert)
+    #Enhancer_Capture.message.disconnect(mwi.LogWindowInsert)
 
     ## All objects and threads have been instantiated and connected, connect the closing slots
     ## for a gracefull shutdown of the application upon window closing.
     ## @todo understand: Recipes invoked when MainWindow is closed, note that scheduler stops other threads.
     for Thread in Thread_List:
         mwi.closing.windowClosing.connect(Thread.close)
+
+    ## Hold GUI idle untill preview image has been captured
+    while Enhancer_Preview is None:
+        mwi.wait_ms(10)
 
     ret = app.exec_()
 
