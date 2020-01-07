@@ -473,10 +473,7 @@ class Scanner(QWidget):
         self.gb_label.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
         self.videoGridLayout.addWidget(self.gb_label,0,0,1,1, Qt.AlignHCenter)
 
-        ## videoStream is a widget to display the snapshots
-        #self.videoStream = QPlainTextEdit()
-        #self.videoStream.setReadOnly(True)
-        #self.videoStream.setStyleSheet("background-color: #AAAAAA;")
+        ## PixImage is a QLabel widget used to display the snapshots
         self.videoGridLayout.addWidget(self.PixImage,1,0)
 
         #self.videoStream.appendPlainText("This will become a video stream widget.")
@@ -595,7 +592,7 @@ if __name__ == '__main__':
     Cam_Capturestream.start(QThread.HighPriority)
     
     ## @param Thread_List is a list containing all threads
-    Thread_List = [Cam_Capturestream, Enhancer_Preview, Enhancer_Capture]
+    Thread_List = [Enhancer_Preview, Enhancer_Capture] ## Cam_Capturestream
 
     ## Connect video/image stream to processing Qt.BlockingQueuedConnection or QueueConnection?
     Cam_Capturestream.PrvReady.connect(lambda: Enhancer_Preview.imgUpdate(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
