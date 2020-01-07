@@ -9,6 +9,7 @@ import stepper
 import signal
 import numpy as np
 import array
+import ctypes
 
 from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit, QFileDialog, QComboBox, QSizePolicy, QDoubleSpinBox, QGraphicsOpacityEffect, QGraphicsDropShadowEffect, QWidget
 from PySide2.QtGui import QFont, QColor, QPalette, QImage, QPixmap
@@ -514,7 +515,13 @@ class Scanner(QWidget):
             if self.DisplayWell is not None:
                 cv2.circle(image, (self.DisplayWell[0], self.DisplayWell[1]), self.DisplayWell[2], (255,0,0), 1)
             height, width = image.shape[:2] ## get dimensions
-            qImage = QImage(image.data, width, height, width * 3, QImage.Format_RGB888) ## Convert from OpenCV to PixMap
+            
+            ch = ctypes.c_char.from_buffer(image.data, 0)
+            rcount = ctypes.c_long.from_address(id(ch)).value
+            qImage = QImage(ch, width, height, width * 3, QImage.Format_RGB888) ## Convert from OpenCV to PixMap
+            ctypes.c_long.from_address(id(ch)).value = rcount
+            #qImage = QImage(image.data, width, height, width * 3, QImage.Format_RGB888) ## Convert from OpenCV to PixMap
+            
             self.PixImage.setPixmap(QPixmap(qImage))
             self.PixImage.show()
             self.gammaSpinBox.raise_()
@@ -598,10 +605,10 @@ if __name__ == '__main__':
     Cam_Capturestream.PrvReady.connect(lambda: Enhancer_Preview.imgUpdate(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
 
     ## Connect video/image stream to processing Qt.BlockingQueuedConnection or QueueConnection?
-    Cam_Capturestream.PrvReady.connect(lambda: mwi.Well_Scanner.prvRawUpdate(Cam_Capturestream.PreviewFrame))
+    Cam_Capturestream.PrvReady.connect(lambda: mwi.Well_Scanner.prvRawUpdate(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
 
     ## Stream images to main window
-    Enhancer_Preview.ready.connect(lambda: mwi.Well_Scanner.prvUpdate(Enhancer_Preview.image))
+    Enhancer_Preview.ready.connect(lambda: mwi.Well_Scanner.prvUpdate(Enhancer_Preview.image), type=Qt.QueuedConnection)
 
     ## Connect video/image stream to processing Qt.BlockingQueuedConnection or QueueConnection?
     Cam_Capturestream.CapReady.connect(lambda: Enhancer_Capture.imgUpdate(Cam_Capturestream.CaptureFrame), type=Qt.BlockingQueuedConnection)
@@ -630,8 +637,7 @@ if __name__ == '__main__':
     mwi.b_turn_down.clicked.connect(steppers.turnDown)
     mwi.b_gotoXY.clicked.connect(lambda: steppers.gotoXY(mwi.x_pos.text(), mwi.y_pos.text()))
     mwi.b_emergency_break.clicked.connect(steppers.emergencyBreak)
-    mwi.b_goto_well.clicked.connect(lambda: stepper_well_positioning.goto_well(mwi.Well_Map[mwi.row_well_combo_box.currentIndex()][1][1], 
-                                                                               mwi.Well_Map[1][mwi.column_well_combo_box.currentIndex()][0]))
+    mwi.b_goto_well.clicked.connect(lambda: stepper_well_positioning.goto_well(mwi.Well_Map[mwi.row_well_combo_box.currentIndex()][1][1], mwi.Well_Map[1][mwi.column_well_combo_box.currentIndex()][0]))
 
     mwi.message.sig.connect(mwi.LogWindowInsert)
     steppers.PrintHAT_serial.message.sig.connect(mwi.LogWindowInsert)
