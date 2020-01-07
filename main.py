@@ -307,30 +307,7 @@ class MainWindow(QDialog):
 
         return self.logGroupBox
 
-    ## @brief MainWindow::createVideoGroupBox(self) creates the groupbox and the widgets in it which are used for displaying vido widgets.
-    # @return self.videoGroupBox. This the groupbox containing the snapshot visualisation widgets.
-    def createVideoWindow(self):
-        self.videoGridLayout = QGridLayout()
-        self.videoGroupBox = QGroupBox()
-        self.videoGroupBox.setStyleSheet("color: #000000;")
-
-        ## label of QGroupbox content
-        self.gb_label = QLabel("Video stream")
-        self.gb_label.setStyleSheet('QLabel {color: #ffffff; font-weight: bold}')
-        self.gb_label.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum))
-        self.videoGridLayout.addWidget(self.gb_label,0,0,1,1, Qt.AlignHCenter)
-
-        ## videoStream is a widget to display the snapshots
-        self.videoStream = QPlainTextEdit()
-        self.videoStream.setReadOnly(True)
-        self.videoStream.setStyleSheet("background-color: #AAAAAA;")
-        self.videoGridLayout.addWidget(self.videoStream,1,0)
-
-        self.videoStream.appendPlainText("This will become a video stream widget.")
-
-        self.videoGroupBox.setLayout(self.videoGridLayout)
-
-        return self.videoGroupBox
+    
     
     ## @brief MainWindow::wellInitialisation(self) declares and defines the wellpositions in millimeters of the specified targets using the batch initialisation file.
     def wellInitialisation(self):
@@ -503,7 +480,8 @@ class Scanner(QWidget):
             cv2.imwrite(filename, self.capture)
         return
 
-    ## @todo commenting
+    ## @brief Scanner::prvUpdate(self, image=None) updates the preview image on the QLabel widget of the MainWindow
+    ## @param image is the new image to show
     @Slot(np.ndarray)
     def prvUpdate(self, image=None):
         if not (image is None):
@@ -516,12 +494,12 @@ class Scanner(QWidget):
                 cv2.circle(image, (self.DisplayWell[0], self.DisplayWell[1]), self.DisplayWell[2], (255,0,0), 1)
             height, width = image.shape[:2] ## get dimensions
             
+            ## creating QImage without ctypes causes memory leaks
             ch = ctypes.c_char.from_buffer(image.data, 0)
             rcount = ctypes.c_long.from_address(id(ch)).value
             qImage = QImage(ch, width, height, width * 3, QImage.Format_RGB888) ## Convert from OpenCV to PixMap
             ctypes.c_long.from_address(id(ch)).value = rcount
-            #qImage = QImage(image.data, width, height, width * 3, QImage.Format_RGB888) ## Convert from OpenCV to PixMap
-            
+
             self.PixImage.setPixmap(QPixmap(qImage))
             self.PixImage.show()
             self.gammaSpinBox.raise_()
@@ -532,7 +510,6 @@ class Scanner(QWidget):
 
     ## @brief Scanner::capUpdate(self, image=None) updates the image when a new one is available and emits a captureUpdated signal.
     ## @param image is the new captured image.
-    ## @todo implement captureUpdated signal.
     @Slot(np.ndarray)
     def capUpdate(self, image=None):
         if not (image is None):
@@ -541,21 +518,21 @@ class Scanner(QWidget):
 
     ## @brief Scanner::capRawUpdate(self, image=None) updates the image when a new one is available and emits a captureRawUpdated signal.
     ## @param image is the new captured raw image.
-    ## @todo implement captureRawUpdated signal.
     @Slot(np.ndarray)
     def capRawUpdate(self, image=None):
         if not (image is None):
             self.captureRaw = image
             self.captureRawUpdated.imageUpdate.emit()
 
-    ## @todo commenting
+    ## @brief Scanner::prvRawUpdate(self, image=None) updates the  raw preview image when a new one is availabe and emits the imageUpdate signal
+    ## @param image is the new raw image
     @Slot(np.ndarray)
     def prvRawUpdate(self, image=None):
         if not (image is None):
             self.previewRaw = image
             self.previewRawUpdated.imageUpdate.emit()
 
-    ## @todo commenting
+    ## @brief kickTimer measures the past time between two ready preview frames of the PiVideoStream class
     @Slot()
     def kickTimer(self):
         clockTime = current_milli_time()
