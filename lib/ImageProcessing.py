@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PySide2.QtCore import QObject, QThread, Signal, Slot
 import cv2
+
 ## Digital image processing threads
 class ImgEnhancer(QThread):
 	## Logging message signal
