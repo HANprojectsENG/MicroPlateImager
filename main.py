@@ -15,8 +15,11 @@ from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton,
 from PySide2.QtGui import QFont, QColor, QPalette, QImage, QPixmap
 from PySide2.QtCore import QSettings, Signal, Slot, Qt, QThread
 
-from lib.PiCam import *
-from lib.ImageProcessing import *
+#from lib.PiCam import *
+#from lib.ImageProcessing import *
+from lib.checkOS import *
+from lib.imageProcessor import *
+from lib.pyqtpicam import PiVideoStream
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 
@@ -528,6 +531,7 @@ class Scanner(QWidget):
     ## @param image is the new raw image
     @Slot(np.ndarray)
     def prvRawUpdate(self, image=None):
+        print("in function Well_reader prvRawUpdate(self, image=None)")
         if not (image is None):
             self.previewRaw = image
             self.previewRawUpdated.imageUpdate.emit()
@@ -552,6 +556,9 @@ if __name__ == '__main__':
     ## Instantiate MainWindow and app
     app = QApplication([])
 
+    ## @todo make signals based on signal.py
+    signals = ObjectSignals()
+
     ## @param mwi is the MainWindow application.
     mwi = MainWindow()
     mwi.show()
@@ -565,39 +572,52 @@ if __name__ == '__main__':
     ## @param stepper_well_positioning is the positioning instance of the wells making use of the steppers control class.
     stepper_well_positioning = stepper.StepperWellPositioning(steppers)
 
-    ## @param Cam_Capturestream
+    ##--------------------NEW IMAGE SOFTWARE--------------------##
+    Image_Processor = ImageProcessor()
     Cam_Capturestream = PiVideoStream(resolution=(int(mwi.settings.value("Camera/width")), int(mwi.settings.value("Camera/height"))), monochrome=True, framerate=int(mwi.settings.value("Camera/framerate")), effect='blur', use_video_port=bool(mwi.settings.value("Camera/use_video_port")))
 
-    ## @param Enhancer_Capture is the image processing thread
-    Enhancer_Preview = ImgEnhancer()
-    Enhancer_Preview.start(QThread.HighPriority) ## GUI depends on this thread
-    Enhancer_Capture = ImgEnhancer()
-    Enhancer_Capture.start()
     Cam_Capturestream.start(QThread.HighPriority)
+    Image_Processor.start(QThread.HighPriority)
+
+    Cam_Capturestream.ready.imageUpdate.connect(lambda: Image_Processor.update(Cam_Capturestream.frame), type=Qt.BlockingQueuedConnection)
+    #Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.prvRawUpdate(Image_Processor.image))
+    Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.prvUpdate(Image_Processor.image))
+
+    ##------------------END NEW IMAGE SOFTWARE------------------##
+
+    ## @param Cam_Capturestream
+    #Cam_Capturestream = PiVideoStream(resolution=(int(mwi.settings.value("Camera/width")), int(mwi.settings.value("Camera/height"))), monochrome=True, framerate=int(mwi.settings.value("Camera/framerate")), effect='blur', use_video_port=bool(mwi.settings.value("Camera/use_video_port")))
+
+    ## @param Enhancer_Capture is the image processing thread
+    #OLD# Enhancer_Preview = ImgEnhancer()
+    #OLD# Enhancer_Preview.start(QThread.HighPriority) ## GUI depends on this thread
+    #OLD# Enhancer_Capture = ImgEnhancer()
+    #OLD# Enhancer_Capture.start()
+    #OLD# Cam_Capturestream.start(QThread.HighPriority)
     
     ## @param Thread_List is a list containing all threads
-    Thread_List = [Enhancer_Preview, Enhancer_Capture] ## Cam_Capturestream
+    #OLD# Thread_List = [Enhancer_Preview, Enhancer_Capture] ## Cam_Capturestream
 
     ## Connect video/image stream to processing Qt.BlockingQueuedConnection or QueueConnection?
-    Cam_Capturestream.PrvReady.connect(lambda: Enhancer_Preview.imgUpdate(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
+    #OLD# Cam_Capturestream.PrvReady.connect(lambda: Enhancer_Preview.imgUpdate(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
 
     ## Connect video/image stream to processing Qt.BlockingQueuedConnection or QueueConnection?
-    Cam_Capturestream.PrvReady.connect(lambda: mwi.Well_Scanner.prvRawUpdate(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
+    #OLD# Cam_Capturestream.PrvReady.connect(lambda: mwi.Well_Scanner.prvRawUpdate(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
 
     ## Stream images to main window
-    Enhancer_Preview.ready.connect(lambda: mwi.Well_Scanner.prvUpdate(Enhancer_Preview.image), type=Qt.QueuedConnection)
+    #OLD# Enhancer_Preview.ready.connect(lambda: mwi.Well_Scanner.prvUpdate(Enhancer_Preview.image), type=Qt.QueuedConnection)
 
     ## Connect video/image stream to processing Qt.BlockingQueuedConnection or QueueConnection?
-    Cam_Capturestream.CapReady.connect(lambda: Enhancer_Capture.imgUpdate(Cam_Capturestream.CaptureFrame), type=Qt.BlockingQueuedConnection)
+    #OLD# Cam_Capturestream.CapReady.connect(lambda: Enhancer_Capture.imgUpdate(Cam_Capturestream.CaptureFrame), type=Qt.BlockingQueuedConnection)
 
     ## Connect video/image stream to processing Qt.BlockingQueuedConnection or QueueConnection?
-    Cam_Capturestream.CapReady.connect(lambda: mwi.Well_Scanner.capRawUpdate(Cam_Capturestream.CaptureFrame), type=Qt.BlockingQueuedConnection)
+    #OLD# Cam_Capturestream.CapReady.connect(lambda: mwi.Well_Scanner.capRawUpdate(Cam_Capturestream.CaptureFrame), type=Qt.BlockingQueuedConnection)
 
     ## Stream images to main window
-    Enhancer_Capture.ready.connect(lambda: mwi.Well_Scanner.capUpdate(Enhancer_Capture.image), type=Qt.QueuedConnection)
+    #OLD# Enhancer_Capture.ready.connect(lambda: mwi.Well_Scanner.capUpdate(Enhancer_Capture.image), type=Qt.QueuedConnection)
 
     ## Measure time delay
-    Cam_Capturestream.PrvReady.connect(mwi.Well_Scanner.kickTimer)
+    #OLD# Cam_Capturestream.PrvReady.connect(mwi.Well_Scanner.kickTimer)
 
     ## Signal slot connections
     mwi.b_firmware_restart.clicked.connect(steppers.firmwareRestart)
@@ -630,20 +650,20 @@ if __name__ == '__main__':
     ## All objects and threads have been instantiated and connected, connect the closing slots
     ## for a gracefull shutdown of the application upon window closing.
     ## @todo understand: Recipes invoked when MainWindow is closed, note that scheduler stops other threads.
-    for Thread in Thread_List:
-        mwi.closing.windowClosing.connect(Thread.close)
+    #OLD# for Thread in Thread_List:
+    #OLD#     mwi.closing.windowClosing.connect(Thread.close)
 
     ## Hold GUI idle untill preview image has been captured
-    while Enhancer_Preview is None:
-        mwi.wait_ms(10)
+    #OLD# while Enhancer_Preview is None:
+    #OLD#     mwi.wait_ms(10)
 
     ret = app.exec_()
 
     ## Wait for one second for each thread to exit.
-    for Thread in Thread_List:
-        if Thread is not None:
-            print(Thread)
-            Thread.wait(1000)
+    #OLD# for Thread in Thread_List:
+    #OLD#     if Thread is not None:
+    #OLD#         print(Thread)
+    #OLD#         Thread.wait(1000)
 
     # stops the motors and disconnects from pseudo serial link /tmp/printer at exit
     steppers.PrintHAT_serial.disconnect()
