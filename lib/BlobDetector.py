@@ -125,7 +125,7 @@ class BlobDetector(Manipulator):
                     
                     # Mark in image
                     if self.plot:
-                        print("Marking blobs in image temporarily disabled. Redundant for this program")
+                        None
                         #cv2.rectangle(ROI_image, tl, br, (0, 0, 0), 1)
                         #cv2.putText(ROI_image, str(blob[5]), br, cv2.FONT_HERSHEY_SIMPLEX, .5, (0,0,0), 1, cv2.LINE_AA)
 

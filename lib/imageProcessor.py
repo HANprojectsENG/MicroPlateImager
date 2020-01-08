@@ -39,7 +39,7 @@ class ImageProcessor(QThread):
         self.isStopped = False
         self.enhancer = ImageEnhancer()
         self.segmenter = ImageSegmenter(plot=True)
-        self.detector = BlobDetector(plot=True)
+        self.detector = BlobDetector(plot=False)
         self.gridDetection = False
        
         
@@ -71,8 +71,6 @@ class ImageProcessor(QThread):
         '''
         Initialise the runner function with passed args, kwargs.
         '''
-        print("image: ")
-        print(self.image) 
         if not self.isStopped and self.image is not None:
             self.signals.message.emit('I: Running worker "{}"\n'.format(self.name))
            

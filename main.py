@@ -579,7 +579,7 @@ if __name__ == '__main__':
     Cam_Capturestream.start(QThread.HighPriority)
     Image_Processor.start(QThread.HighPriority)
 
-    Cam_Capturestream.ready.imageUpdate.connect(lambda: Image_Processor.update(Cam_Capturestream.frame), type=Qt.BlockingQueuedConnection)
+    Cam_Capturestream.ready.imageUpdate.connect(lambda: Image_Processor.update(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
     Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.capUpdate(Image_Processor.image))
     Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.prvUpdate(Image_Processor.image))
 

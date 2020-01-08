@@ -33,7 +33,14 @@ class PiVideoStream(QThread):
     name = "PiVideoStream"
     message = signal.signalClass()#pyqtSignal(str)  # Message signal
     ready = signal.signalClass()#pyqtSignal() # Ready signal
+    CapReady =  signal.signalClass()
     pause = False
+    CaptureStream = None
+    PreviewStream = None
+    CaptureArray = None
+    PreviewArray = None
+    CaptureFrame = None
+    PreviewFrame = None
     
     ## The constructor.
     def __init__(self, resolution=(640,480), monochrome=False, framerate=24, effect='none', use_video_port=False):
@@ -51,19 +58,39 @@ class PiVideoStream(QThread):
     def run(self):
         try:
             self.fps = FPS().start()
-            for f in self.stream:
+            for f1 in self.previewStream:
                 if (self.pause == True):
                     self.message.sig.emit(self.name + ": paused.")
-                    break  # return from thread is needed
+                    break # return from thread is needed
                 else:
-                    self.rawCapture.truncate(0)  # clear the stream in preparation for the next frame
-##                    self.rawCapture.seek(0) 
-                    self.frame = f.array # grab the frame from the stream
+                    self.rawCapture.truncate(0) # clear the stream in preparation for the next frame
+                    self.PreviewArray.truncate(0) # clear the stream in preparation for the next frame
+                    for f2 in self.stream:
+                        self.rawCapture.seek(0)
+                        self.CaptureFrame = f2.array
+                        self.CapReady.imageUpdate.emit()
+                        break
+                    self.PreviewArray.seek(0)
+                    self.PreviewFrame = f1.array
                     self.fps.update()
                     if self.startMillis is not None:
                         self.message.sig.emit(self.name + ": processing delay = " + str(int(round(time.time() * 1000)) - self.startMillis) + " ms")
                     self.startMillis = int(round(time.time() * 1000))
-                    self.ready.imageUpdate.emit()                    
+                    self.ready.imageUpdate.emit()    
+            
+            #for f in self.stream:
+            #    if (self.pause == True):
+            #        self.message.sig.emit(self.name + ": paused.")
+            #        break  # return from thread is needed
+            #    else:
+            #        self.rawCapture.truncate(0)  # clear the stream in preparation for the next frame
+##          #          self.rawCapture.seek(0) 
+            #        self.frame = f.array # grab the frame from the stream
+            #        self.fps.update()
+            #        if self.startMillis is not None:
+            #            self.message.sig.emit(self.name + ": processing delay = " + str(int(round(time.time() * 1000)) - self.startMillis) + " ms")
+            #        self.startMillis = int(round(time.time() * 1000))
+            #        self.ready.imageUpdate.emit()                    
         except Exception as err:
             print(err)
             self.message.sig.emit(self.name + ": error running thread.")
@@ -89,10 +116,15 @@ class PiVideoStream(QThread):
         if self.monochrome:
 ##            self.camera.color_effects = (128,128) # return monochrome image, not required if we take Y frame only.
             self.rawCapture = PiYArray(self.camera, size=self.camera.resolution)
+            self.PreviewArray = PiYArray(self.camera, size=(640,480))
             self.stream = self.camera.capture_continuous(self.rawCapture, 'yuv', use_video_port)
+            self.previewStream = self.camera.capture_continuous(output=self.PreviewArray, format='yuv', use_video_port=use_video_port, splitter_port=1, resize=(640,480))
         else:
             self.rawCapture = PiRGBArray(self.camera, size=self.camera.resolution)
+            self.PreviewArray = PiRGBArray(self.camera, size=(640,480))
             self.stream = self.camera.capture_continuous(self.rawCapture, 'bgr', use_video_port)
+            self.previewStream = self.camera.capture_continuous(output=self.PreviewArray, format='bgr', use_video_port=use_video_port, splitter_port=1, resize=(640,480))
+
 ##        time.sleep(2)
         GeneralEventLoop = QEventLoop(self)
         QTimer.singleShot(2, GeneralEventLoop.exit)
