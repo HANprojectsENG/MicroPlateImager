@@ -7,6 +7,7 @@ import motor_control.serial_printhat as serial_printhat
 import lib.signal as signal
 import numpy as np
 import os
+import cv2
 from PySide2.QtCore import QTimer, Signal, Slot, QEventLoop, QObject, QSettings
 
 ## @brief StepperControl contains steppermotor specific information and creates G-code strings when called specific functions like turnRight().

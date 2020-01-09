@@ -9,6 +9,8 @@ from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 import numpy as np
+import math
+import sys
 import cv2
 import traceback
 import lib.signal as signal
@@ -118,6 +120,77 @@ class ImageProcessor(QThread):
     def setDetector(self, val):
         self.gridDetection = val        
 
+## @brief class description
+## @author Robin Meelkers
+class WellPositionEvaluator(QThread):
+    img_width = None
+    img_height = None 
+    circle_minRadius = None
+    circle_maxRadius = None
+    circle_minDistance = None
+
+    def __init__(self, resolution):
+        super().__init__()
+        self.img_width, self.img_height = resolution
+        # The radius' are just initial values and will be reset once the first circle was found at the home position.
+        self.circle_maxRadius = int((self.img_height/2)) # maximum circle radius is one that covers the entire height
+        self.circle_minRadius = int((self.img_height/2) * 0.7) # minimum circle size covers 70% of img height
+        self.circle_minDistance - int(self.img_height/480) # find as many circles as reasonably possible
+
+    ## @todo format commenting below
+    ## Finds the position error by finding the well bottom centroid.
+    ## Args:
+    ## img: 2d grayscale image list
+    ## target: target coordinates (topleft pixel is 0,0)
+    ## Returns: offset tuple (x, y) position error
+    ## Find circle(s) using hough transform, and return the circle that is closest to the centre.
+    ## If no circle could be found decrease param2 and increase contrast,
+    ## though this might cause false negatives if it is too low.
+    ## When this still fails, use blob detection and attempt to find a circle like object.
+    ## :param source:
+    def evaluate(self, source, target=(0, 0)):
+        error = None
+        best_match = None
+        best_area = None
+        best_radius = None
+        img = source.copy()
+        ## First attempt to find the well using the hough circles method.
+        ## Hough circle is most accurate when the well is closest to the desired target.
+        ## Normalize and adjust contrast 'curve' using clahe
+        cv2.normalize(img, img, 0, 255, cv2.NORM_MINMAX)
+        clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(8, 8))
+        img = clahe.apply(img)
+        circles = cv2.HoughCircles(image=img, method=cv2.HOUGH_GRADIENT, dp=1, param1=40, param2=80, minDist=self.circle_minDistance, minRadius=self.circle_minRadius, maxRadius=self.circle_maxRadius)
+        if not circles is None:
+            circles = np.round(circles[0, :]).astype("int")
+            ## loop over the (x, y) coordinates and radius of the circles
+            ## store the circle that has the largest radius
+            best_radius = 0
+            for (x, y, r) in circles:
+                target_error = np.subtract((x,y), target)
+                if best_radius < r:
+                    best_match - target_error
+                    best_area = int(math.pi * r * r)
+                    best_radius = r 
+            error = (best_match, best_area, best_radius)
+            print("Found (hough): " + str(error))
+            return error
+        ## Couldnt find a circle using the hough circle method, the well is probably too far off target.
+        ## Try detecting a well by using blobs and controur detection, and calculating their eccentricity.
+        ## Threashold the image to create solid objects.
+        cv2.threshold(img, 200, 255, cv2.THRESH_OTSU, img)
+
+        # Morph-close with a small kernel to close holes caused by objects within the well.
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (int(self.img_width / 128), int(self.img_height / 128)))
+        cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel, img, (-1, -1), 2)
+
+        ## Find contours and select best matching blob by looking at the mean score for rondness and eccentricity,
+        ## where lower is better. Apply a threshold on found objects,
+        ## Must have a minimum to prevent false negatives and maximum area to prevent false positives.
+        best_score = sys.maxsize
+        _,contours,_ = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        for i, c in enumerate(contours):
+            area - cv2.contourArea(c)
 
             
 
