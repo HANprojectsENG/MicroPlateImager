@@ -10,8 +10,7 @@ from PySide2.QtCore import QTimer, Signal, Slot, QEventLoop, QObject, QSettings
 
 ## @brief StepperControl contains steppermotor specific information and creates G-code strings when called specific functions like turnRight().
 class StepperControl():
-    ## @param message is the class message signal used to display the result in the window log using its slot function.
-    message = signal.signalClass()
+    signals = signal.signalClass()
     PrintHAT_serial = serial_printhat.GcodeSerial()
 
     ## @brief StepperControl::__init__(self) sets the motor position instance variable to zero.
@@ -26,7 +25,7 @@ class StepperControl():
     ## @param message is the string message to be emitted.
     def msg(self, message):
         if message is not None:
-            self.message.mes.emit(self.__class__.__name__ + ": " + str(message))
+            self.signals.mes.emit(self.__class__.__name__ + ": " + str(message))
         return
 
     def getPositionFromSTM(self):
@@ -201,7 +200,7 @@ class StepperControl():
 ## @param QObject is used to be able to use QObject
 ## @todo check if param QObject is necessary or if class signalClass() solves the QObject inheritance already.
 class StepperWellPositioning():
-    message = signal.signalClass()
+    signals = signal.signalClass()
     stepper_control = None ## object MotorControl class
     current_well_row = None
     current_well_column = None
@@ -218,7 +217,7 @@ class StepperWellPositioning():
     @Slot(str)
     def msg(self, message):
         if message is not None:
-            self.message.mes.emit(self.__class__.__name__ + ": " + str(message))
+            self.signals.mes.emit(self.__class__.__name__ + ": " + str(message))
         return
 
     ## @brief StepperWellPositioning(QObject)::reset_current_well(self) sets the current well position (XY) to None

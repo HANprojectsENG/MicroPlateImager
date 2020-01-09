@@ -31,9 +31,10 @@ class PiYArray(PiArrayOutput):
 ## PiVideoStream class streams camera images to a numpy array
 class PiVideoStream(QThread):
     name = "PiVideoStream"
-    message = signal.signalClass()
-    prvReady = signal.signalClass()
-    CapReady =  signal.signalClass()
+    signals = signal.signalClass()
+    #message = signal.signalClass()
+    #prvReady = signal.signalClass()
+    #CapReady =  signal.signalClass()
     pause = False
     CaptureStream = None
     PreviewStream = None
@@ -59,7 +60,7 @@ class PiVideoStream(QThread):
     ## @param message is the string message to be emitted.
     def msg(self, message):
         if message is not None:
-            self.message.mes.emit(self.__class__.__name__ + ": " + str(message))
+            self.signals.mes.emit(self.__class__.__name__ + ": " + str(message))
         return
 
     def run(self):
@@ -75,7 +76,7 @@ class PiVideoStream(QThread):
                     for f2 in self.stream:
                         self.rawCapture.seek(0)
                         self.CaptureFrame = f2.array
-                        self.CapReady.imageUpdate.emit()
+                        self.signals.capReady.emit()
                         break
                     self.PreviewArray.seek(0)
                     self.PreviewFrame = f1.array
@@ -84,7 +85,7 @@ class PiVideoStream(QThread):
                         None
                         #print(self.name + ": processing delay = " + str(int(round(time.time() * 1000)) - self.startMillis) + " ms")
                     self.startMillis = int(round(time.time() * 1000))
-                    self.prvReady.imageUpdate.emit()    
+                    self.signals.prvReady.emit()    
                            
         except Exception as err:
             print(err)

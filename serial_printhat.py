@@ -11,7 +11,7 @@ from PySide2.QtCore import QTimer, QEventLoop
 ## @brief class GcodeSerial handles the /tmp/printer pseudoserial connection and writes incoming G-code. It also reads responses of the serial port.
 class GcodeSerial:
     ## @param message is the class message signal used to display the result in the window log using its slot function.
-    message = signal.signalClass()
+    signals = signal.signalClass()
 
     ## @param ins is the number of instances created of GcodeSerial. This may not exceed 1.
     ins = 0
@@ -41,7 +41,7 @@ class GcodeSerial:
     # @param message is the string message to be emitted.
     def msg(self, message):
         if message is not None:
-            self.message.mes.emit(self.__class__.__name__ + ": " + str(message))
+            self.signals.mes.emit(self.__class__.__name__ + ": " + str(message))
         return
     
     ## @brief GcodeSerial::getConnectionState(self) is a self.connection_state getter.

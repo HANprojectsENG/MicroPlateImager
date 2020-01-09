@@ -24,8 +24,7 @@ current_milli_time = lambda: int(round(time.time() * 1000))
 ## @brief MainWindow(QDialog) instantiates a main window. It consists of a manual control groupbox in which the user can control the steppers of the plate reader manually. Furthermore a groupbox with batch control widgets is created. A groupbox with log window provides runtime debug information. A groupbox with a camerastream widget shows the snapshots created by the well.
 ## @param QDialog is used as the window is a user interactive GUI.
 class MainWindow(QDialog):
-    message = signal.signalClass() # message signal
-    closing = signal.signalClass() # window closing signal
+    signals = signal.signalClass() # message signal
     settings = None
     settings_batch = None
     Well_Map = None
@@ -80,7 +79,7 @@ class MainWindow(QDialog):
     ## @param message is the string message to be emitted.
     def msg(self, message):
         if message is not None:
-            self.message.mes.emit(self.__class__.__name__ + ": " + str(message))
+            self.signals.mes.emit(self.__class__.__name__ + ": " + str(message))
         return
     
     ## @brief MainWindow::LogWindowInsert(self, message) appends the message to the log window. This is a slot function called when a mesnal message is emitted from any class which uses the message signal. This Slot is connected which each class which uses this signal.
@@ -370,22 +369,17 @@ class MainWindow(QDialog):
         return
 
     def closeEvent(self, event):
-        self.closing.windowClosing.emit()
+        self.signals.windowClosing.emit()
         event.accept()
         return
 
 ## @brief Scanner is the class which handles the image snapshot recording and processing and updates the video stream
 class Scanner(QWidget):
-    status = signal.signalClass()
-    message = signal.signalClass()
+    signals = signal.signalClass()
     preview = None ## @param preview contains the preview image
     capture = None ## @param capture contains the captured image
     captureRaw = None ## @param captureRaw contains the raw captured image
     previewRaw = None ## @param previewRaw contains the raw preview image
-    previewUpdated = signal.signalClass()
-    captureUpdated = signal.signalClass()
-    previewRawUpdated = signal.signalClass()
-    captureRawUpdated = signal.signalClass()
     prevClockTime = None
     DisplayTarget = None
     DisplayWell = None
@@ -458,7 +452,7 @@ class Scanner(QWidget):
     ## @param message is the string message to be emitted.
     def msg(self, message):
         if message is not None:
-            self.message.mes.emit(self.__class__.__name__ + ": " + str(message))
+            self.signals.mes.emit(self.__class__.__name__ + ": " + str(message))
         return
     
     ## @brief Scanner::reader(self) takes snapshots
@@ -499,7 +493,7 @@ class Scanner(QWidget):
             self.claheSpinBoxTitle.raise_()
             self.gammaSpinBox.raise_()
             self.claheSpinBox.raise_()
-            self.previewUpdated.imageUpdate.emit()
+            self.signals.previewUpdated.emit()
 
     ## @brief Scanner::capUpdate(self, image=None) updates the image when a new one is available and emits a captureUpdated signal.
     ## @param image is the new captured image.
@@ -507,7 +501,7 @@ class Scanner(QWidget):
     def capUpdate(self, image=None):
         if not (image is None):
             self.capture = image
-            self.captureUpdated.imageUpdate.emit()
+            self.signals.captureUpdated.emit()
 
     ## @brief Scanner::capRawUpdate(self, image=None) updates the image when a new one is available and emits a captureRawUpdated signal.
     ## @param image is the new captured raw image.
@@ -515,7 +509,7 @@ class Scanner(QWidget):
     def capRawUpdate(self, image=None):
         if not (image is None):
             self.captureRaw = image
-            self.captureRawUpdated.imageUpdate.emit()
+            self.signals.captureRawUpdated.emit()
 
     ## @brief Scanner::prvRawUpdate(self, image=None) updates the  raw preview image when a new one is availabe and emits the imageUpdate signal
     ## @param image is the new raw image
@@ -524,7 +518,7 @@ class Scanner(QWidget):
         print("in function Well_reader prvRawUpdate(self, image=None)")
         if not (image is None):
             self.previewRaw = image
-            self.previewRawUpdated.imageUpdate.emit()
+            self.signals.previewRawUpdated.emit()
 
     ## @brief kickTimer measures the past time between two ready preview frames of the PiVideoStream class
     @Slot()
@@ -532,7 +526,7 @@ class Scanner(QWidget):
         clockTime = current_milli_time()
         if self.prevClockTime is not None:
             timeDiff = clockTime - self.prevClockTime
-            #self.status.imageUpdate.emit("Frame delay: " + " {:04d}".format(round(timeDiff)) + "ms")
+            #self.msg("Frame delay: " + " {:04d}".format(round(timeDiff)) + "ms")
         self.prevClockTime = clockTime
  
 ################################ MAIN APPLICATION ################################
@@ -547,7 +541,7 @@ if __name__ == '__main__':
     app = QApplication([])
 
     ## @todo make signals based on signal.py
-    signals = ObjectSignals()
+    #signals = ObjectSignals()
 
     ## @param mwi is the MainWindow application.
     mwi = MainWindow()
@@ -570,7 +564,7 @@ if __name__ == '__main__':
     Cam_Capturestream.start(QThread.HighPriority)
     Image_Processor.start(QThread.HighPriority)
 
-    Cam_Capturestream.prvReady.imageUpdate.connect(lambda: Image_Processor.update(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
+    Cam_Capturestream.signals.prvReady.connect(lambda: Image_Processor.update(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
     Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.capUpdate(Image_Processor.image))
     Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.prvUpdate(Image_Processor.image))
 
@@ -627,12 +621,12 @@ if __name__ == '__main__':
     mwi.b_emergency_break.clicked.connect(steppers.emergencyBreak)
     mwi.b_goto_well.clicked.connect(lambda: stepper_well_positioning.goto_well(mwi.Well_Map[mwi.row_well_combo_box.currentIndex()][1][1], mwi.Well_Map[1][mwi.column_well_combo_box.currentIndex()][0]))
 
-    mwi.message.mes.connect(mwi.LogWindowInsert)
-    steppers.PrintHAT_serial.message.mes.connect(mwi.LogWindowInsert)
-    steppers.message.mes.connect(mwi.LogWindowInsert)
-    stepper_well_positioning.message.mes.connect(mwi.LogWindowInsert)
-    mwi.Well_Scanner.message.mes.connect(mwi.LogWindowInsert)
-    Cam_Capturestream.message.mes.connect(mwi.LogWindowInsert)
+    mwi.signals.mes.connect(mwi.LogWindowInsert)
+    steppers.PrintHAT_serial.signals.mes.connect(mwi.LogWindowInsert)
+    steppers.signals.mes.connect(mwi.LogWindowInsert)
+    stepper_well_positioning.signals.mes.connect(mwi.LogWindowInsert)
+    mwi.Well_Scanner.signals.mes.connect(mwi.LogWindowInsert)
+    Cam_Capturestream.signals.mes.connect(mwi.LogWindowInsert)
 
     #for Thread in Thread_List:
     #    Thread.message.connect(mwi.LogWindowInsert)
