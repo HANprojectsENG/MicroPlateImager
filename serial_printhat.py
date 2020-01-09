@@ -41,7 +41,7 @@ class GcodeSerial:
     # @param message is the string message to be emitted.
     def msg(self, message):
         if message is not None:
-            self.message.sig.emit(self.__class__.__name__ + ": " + str(message))
+            self.message.mes.emit(self.__class__.__name__ + ": " + str(message))
         return
     
     ## @brief GcodeSerial::getConnectionState(self) is a self.connection_state getter.

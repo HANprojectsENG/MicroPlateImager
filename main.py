@@ -15,21 +15,16 @@ from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton,
 from PySide2.QtGui import QFont, QColor, QPalette, QImage, QPixmap
 from PySide2.QtCore import QSettings, Signal, Slot, Qt, QThread
 
-#from lib.PiCam import *
-#from lib.ImageProcessing import *
 from lib.checkOS import *
 from lib.imageProcessor import *
-from lib.pyqtpicam import PiVideoStream
+from lib.PiCam import PiVideoStream
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 
 ## @brief MainWindow(QDialog) instantiates a main window. It consists of a manual control groupbox in which the user can control the steppers of the plate reader manually. Furthermore a groupbox with batch control widgets is created. A groupbox with log window provides runtime debug information. A groupbox with a camerastream widget shows the snapshots created by the well.
 ## @param QDialog is used as the window is a user interactive GUI.
-## @todo Creation of signal messages for the log window.
-## @todo Creation of the snapshot stream.
 class MainWindow(QDialog):
     message = signal.signalClass() # message signal
-
     closing = signal.signalClass() # window closing signal
     settings = None
     settings_batch = None
@@ -69,7 +64,7 @@ class MainWindow(QDialog):
         self.mainWindowLayout.addWidget(vgb,0,1)
         self.mainWindowLayout.addWidget(lgb,1,1)
 
-        self.setWindowTitle("PrintHAT")
+        self.setWindowTitle("WELL READER")
         
         #self.mainWindowLayout.setStyleSheet('background-color: #a9a9a9')
         
@@ -85,10 +80,10 @@ class MainWindow(QDialog):
     ## @param message is the string message to be emitted.
     def msg(self, message):
         if message is not None:
-            self.message.sig.emit(self.__class__.__name__ + ": " + str(message))
+            self.message.mes.emit(self.__class__.__name__ + ": " + str(message))
         return
     
-    ## @brief MainWindow::LogWindowInsert(self, message) appends the message to the log window. This is a slot function called when a signal message is emitted from any class which uses the message signal. This Slot is connected which each class which uses this signal.
+    ## @brief MainWindow::LogWindowInsert(self, message) appends the message to the log window. This is a slot function called when a mesnal message is emitted from any class which uses the message signal. This Slot is connected which each class which uses this signal.
     # @param message is the message to be displayed.
     @Slot(str)
     def LogWindowInsert(self, message):
@@ -310,8 +305,6 @@ class MainWindow(QDialog):
 
         return self.logGroupBox
 
-    
-    
     ## @brief MainWindow::wellInitialisation(self) declares and defines the wellpositions in millimeters of the specified targets using the batch initialisation file.
     def wellInitialisation(self):
         ## Declare well map
@@ -381,7 +374,7 @@ class MainWindow(QDialog):
         event.accept()
         return
 
-## @brief Scanner is the class which handles the image snapshot recording and processing
+## @brief Scanner is the class which handles the image snapshot recording and processing and updates the video stream
 class Scanner(QWidget):
     status = signal.signalClass()
     message = signal.signalClass()
@@ -457,8 +450,6 @@ class Scanner(QWidget):
         ## PixImage is a QLabel widget used to display the snapshots
         self.videoGridLayout.addWidget(self.PixImage,1,0)
 
-        #self.videoStream.appendPlainText("This will become a video stream widget.")
-
         self.videoGroupBox.setLayout(self.videoGridLayout)
 
         return self.videoGroupBox
@@ -467,7 +458,7 @@ class Scanner(QWidget):
     ## @param message is the string message to be emitted.
     def msg(self, message):
         if message is not None:
-            self.message.sig.emit(self.__class__.__name__ + ": " + str(message))
+            self.message.mes.emit(self.__class__.__name__ + ": " + str(message))
         return
     
     ## @brief Scanner::reader(self) takes snapshots
@@ -475,11 +466,10 @@ class Scanner(QWidget):
     def reader(self):
         if not (self.capture is None):
             if not os.path.exists("snapshots"):
-                print("Generating snapshots directory")
+                self.msg("Generating snapshots directory")
                 os.mkdir("snapshots")
             filename = 'snapshots/Reader_Snapshot' + str(current_milli_time()) + '.png'
-            print("filename: " + str(filename))
-            self.msg(filename)
+            self.msg("Generated snapshot: " + str(filename))
             cv2.imwrite(filename, self.capture)
         return
 
@@ -573,13 +563,14 @@ if __name__ == '__main__':
     stepper_well_positioning = stepper.StepperWellPositioning(steppers)
 
     ##--------------------NEW IMAGE SOFTWARE--------------------##
+    ## @todo commenting 
     Image_Processor = ImageProcessor()
     Cam_Capturestream = PiVideoStream(resolution=(int(mwi.settings.value("Camera/width")), int(mwi.settings.value("Camera/height"))), monochrome=True, framerate=int(mwi.settings.value("Camera/framerate")), effect='blur', use_video_port=bool(mwi.settings.value("Camera/use_video_port")))
 
     Cam_Capturestream.start(QThread.HighPriority)
     Image_Processor.start(QThread.HighPriority)
 
-    Cam_Capturestream.ready.imageUpdate.connect(lambda: Image_Processor.update(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
+    Cam_Capturestream.prvReady.imageUpdate.connect(lambda: Image_Processor.update(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
     Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.capUpdate(Image_Processor.image))
     Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.prvUpdate(Image_Processor.image))
 
@@ -636,11 +627,12 @@ if __name__ == '__main__':
     mwi.b_emergency_break.clicked.connect(steppers.emergencyBreak)
     mwi.b_goto_well.clicked.connect(lambda: stepper_well_positioning.goto_well(mwi.Well_Map[mwi.row_well_combo_box.currentIndex()][1][1], mwi.Well_Map[1][mwi.column_well_combo_box.currentIndex()][0]))
 
-    mwi.message.sig.connect(mwi.LogWindowInsert)
-    steppers.PrintHAT_serial.message.sig.connect(mwi.LogWindowInsert)
-    steppers.message.sig.connect(mwi.LogWindowInsert)
-    stepper_well_positioning.message.sig.connect(mwi.LogWindowInsert)
-    mwi.Well_Scanner.message.sig.connect(mwi.LogWindowInsert)
+    mwi.message.mes.connect(mwi.LogWindowInsert)
+    steppers.PrintHAT_serial.message.mes.connect(mwi.LogWindowInsert)
+    steppers.message.mes.connect(mwi.LogWindowInsert)
+    stepper_well_positioning.message.mes.connect(mwi.LogWindowInsert)
+    mwi.Well_Scanner.message.mes.connect(mwi.LogWindowInsert)
+    Cam_Capturestream.message.mes.connect(mwi.LogWindowInsert)
 
     #for Thread in Thread_List:
     #    Thread.message.connect(mwi.LogWindowInsert)

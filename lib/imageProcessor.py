@@ -11,6 +11,7 @@ from PySide2.QtWidgets import *
 import numpy as np
 import cv2
 import traceback
+import signal
 from lib.imageEnhancer import ImageEnhancer
 from lib.imageSegmenter import ImageSegmenter
 from lib.BlobDetector import BlobDetector
@@ -35,7 +36,7 @@ class ImageProcessor(QThread):
 
         self.name = 'image processor'
         self.image = None
-        self.signals = ObjectSignals()
+        self.signals = signal.signalClass()
         self.isStopped = False
         self.enhancer = ImageEnhancer()
         self.segmenter = ImageSegmenter(plot=True)
@@ -47,6 +48,13 @@ class ImageProcessor(QThread):
         None
         self.wait()
 
+    ## @brief ImageProcessor::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
+    ## @param message is the string message to be emitted.
+    def msg(self, message):
+        if message is not None:
+            self.signals.mes.emit(self.__class__.__name__ + ": " + str(message))
+        return
+
     @Slot(np.ndarray)
     # Note that we need this wrapper around the Thread run function, since the latter will not accept any parameters
     def update(self, image=None):
@@ -55,7 +63,7 @@ class ImageProcessor(QThread):
             if self.isRunning():
                 # thread is already running
                 # drop frame
-                self.signals.message.emit('I: {} busy, frame dropped'.format(self.name))
+                self.msg('I: {} busy, frame dropped'.format(self.name))
             elif image is not None:
                 # we have a new image
                 self.image = image #.copy()        
@@ -63,6 +71,7 @@ class ImageProcessor(QThread):
                 
         except Exception as err:
             traceback.print_exc()
+            self.msg((type(err), err.args, traceback.format_exc()))
             self.signals.error.emit((type(err), err.args, traceback.format_exc()))
 
        
@@ -72,7 +81,7 @@ class ImageProcessor(QThread):
         Initialise the runner function with passed args, kwargs.
         '''
         if not self.isStopped and self.image is not None:
-            self.signals.message.emit('I: Running worker "{}"\n'.format(self.name))
+            self.msg('I: Running worker "{}"\n'.format(self.name))
            
             # Retrieve args/kwargs here; and fire processing using them
             try:
@@ -102,7 +111,7 @@ class ImageProcessor(QThread):
     @Slot()
     def stop(self):
         if self.isRunning():
-            self.signals.message.emit('I: Stopping worker "{}"\n'.format(self.name))
+            self.msg('I: Stopping worker "{}"\n'.format(self.name))
             self.isStopped = True
             self.quit()
 

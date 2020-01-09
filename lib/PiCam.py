@@ -31,8 +31,8 @@ class PiYArray(PiArrayOutput):
 ## PiVideoStream class streams camera images to a numpy array
 class PiVideoStream(QThread):
     name = "PiVideoStream"
-    message = signal.signalClass()#pyqtSignal(str)  # Message signal
-    ready = signal.signalClass()#pyqtSignal() # Ready signal
+    message = signal.signalClass()
+    prvReady = signal.signalClass()
     CapReady =  signal.signalClass()
     pause = False
     CaptureStream = None
@@ -55,12 +55,19 @@ class PiVideoStream(QThread):
     def __del__(self):
         self.wait()
 
+    ## @brief PiVideoStream::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
+    ## @param message is the string message to be emitted.
+    def msg(self, message):
+        if message is not None:
+            self.message.mes.emit(self.__class__.__name__ + ": " + str(message))
+        return
+
     def run(self):
         try:
             self.fps = FPS().start()
             for f1 in self.previewStream:
                 if (self.pause == True):
-                    self.message.sig.emit(self.name + ": paused.")
+                    self.msg(self.name + ": paused.")
                     break # return from thread is needed
                 else:
                     self.rawCapture.truncate(0) # clear the stream in preparation for the next frame
@@ -74,47 +81,28 @@ class PiVideoStream(QThread):
                     self.PreviewFrame = f1.array
                     self.fps.update()
                     if self.startMillis is not None:
-                        self.message.sig.emit(self.name + ": processing delay = " + str(int(round(time.time() * 1000)) - self.startMillis) + " ms")
+                        print(self.name + ": processing delay = " + str(int(round(time.time() * 1000)) - self.startMillis) + " ms")
                     self.startMillis = int(round(time.time() * 1000))
-                    self.ready.imageUpdate.emit()    
-            
-            #for f in self.stream:
-            #    if (self.pause == True):
-            #        self.message.sig.emit(self.name + ": paused.")
-            #        break  # return from thread is needed
-            #    else:
-            #        self.rawCapture.truncate(0)  # clear the stream in preparation for the next frame
-##          #          self.rawCapture.seek(0) 
-            #        self.frame = f.array # grab the frame from the stream
-            #        self.fps.update()
-            #        if self.startMillis is not None:
-            #            self.message.sig.emit(self.name + ": processing delay = " + str(int(round(time.time() * 1000)) - self.startMillis) + " ms")
-            #        self.startMillis = int(round(time.time() * 1000))
-            #        self.ready.imageUpdate.emit()                    
+                    self.prvReady.imageUpdate.emit()    
+                           
         except Exception as err:
             print(err)
-            self.message.sig.emit(self.name + ": error running thread.")
+            self.msg(self.name + ": error running thread.")
             pass
+
         finally:
             self.camera.stop_preview()
-            self.message.sig.emit(self.name + ": quit.")
+            self.msg(self.name + ": quit.")
 
     def initCamera(self, resolution=(640,480), monochrome=False, framerate=24, effect='none', use_video_port=False):
-        self.message.sig.emit(self.name + "Init: resolution = " + str(resolution))
+        self.msg(self.name + "Init: resolution = " + str(resolution))
         self.camera.resolution = resolution        
         self.camera.image_effect = effect
         self.camera.image_effect_params = (2,)
         self.camera.iso = 100 # should force unity analog gain
-##        self.camera.video_denoise = True
         self.monochrome = monochrome # spoils edges
-        # dunno if setting awb mode manually is really useful
-##        self.camera.awb_mode = 'off'
-##        self.camera.awb_gains = 5.0
-##        self.camera.meter_mode = 'average'
-##        self.camera.exposure_mode = 'auto'  # 'sports' to reduce motion blur, 'off'after init to freeze settings
         self.camera.framerate = framerate
         if self.monochrome:
-##            self.camera.color_effects = (128,128) # return monochrome image, not required if we take Y frame only.
             self.rawCapture = PiYArray(self.camera, size=self.camera.resolution)
             self.PreviewArray = PiYArray(self.camera, size=(640,480))
             self.stream = self.camera.capture_continuous(self.rawCapture, 'yuv', use_video_port)
@@ -125,23 +113,17 @@ class PiVideoStream(QThread):
             self.stream = self.camera.capture_continuous(self.rawCapture, 'bgr', use_video_port)
             self.previewStream = self.camera.capture_continuous(output=self.PreviewArray, format='bgr', use_video_port=use_video_port, splitter_port=1, resize=(640,480))
 
-##        time.sleep(2)
         GeneralEventLoop = QEventLoop(self)
         QTimer.singleShot(2, GeneralEventLoop.exit)
         GeneralEventLoop.exec_()            
         
-    #@pyqtSlot()
     @Slot()
     def stop(self):
         self.pause = True
         self.fps.stop()
         print(self.name + ": approx. acquisition speed: {:.2f} fps".format(self.fps.fps()))        
-##        self.wait()
-##        self.rawCapture.close()
-##        self.camera.close()
         self.quit()
-        self.message.sig.emit(self.name + ": closed.")
-##        self.exit(0)
+        self.msg(self.name + ": closed.")
         
     @Slot()
     def changeCameraSettings(self, resolution=(640,480), framerate=24, format="bgr", effect='none', use_video_port=False):

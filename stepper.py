@@ -26,7 +26,7 @@ class StepperControl():
     ## @param message is the string message to be emitted.
     def msg(self, message):
         if message is not None:
-            self.message.sig.emit(self.__class__.__name__ + ": " + str(message))
+            self.message.mes.emit(self.__class__.__name__ + ": " + str(message))
         return
 
     def getPositionFromSTM(self):
@@ -218,7 +218,7 @@ class StepperWellPositioning():
     @Slot(str)
     def msg(self, message):
         if message is not None:
-            self.message.sig.emit(self.__class__.__name__ + ": " + str(message))
+            self.message.mes.emit(self.__class__.__name__ + ": " + str(message))
         return
 
     ## @brief StepperWellPositioning(QObject)::reset_current_well(self) sets the current well position (XY) to None
