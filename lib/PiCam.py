@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import numpy as np
-import signal
+import lib.signal as signal
 #from PyQt5.QtCore import QObject, QThread, QTimer, QEventLoop, pyqtSignal, pyqtSlot
 from PySide2.QtCore import QObject, QThread, QTimer, QEventLoop, Signal, Slot
 from picamera import PiCamera

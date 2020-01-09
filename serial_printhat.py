@@ -1,9 +1,10 @@
 ## @package serial_printhat.py
-# @brief serial_printhat.py handles the connection of the /tmp/printer pseudo serial port. It also writes the incoming G-code commands to the STM microcontroller on the PrintHAT.
+## @brief serial_printhat.py handles the connection of the /tmp/printer pseudo serial port. It also writes the incoming G-code commands to the STM microcontroller on the PrintHAT.
+## @author Gert van Lagen
 
 import os
 import serial
-import signal
+import lib.signal as signal
 
 from PySide2.QtWidgets import *
 from PySide2.QtCore import QTimer, QEventLoop

@@ -1,9 +1,10 @@
 ## @package stepper.py
-# @brief stepper.py contains classes for stepper motor control, G-code string creation, homing and well positioning.
+## @brief stepper.py contains classes for stepper motor control, G-code string creation, homing and well positioning.
+## @author Gert van Lagen
 
 import main
 import serial_printhat
-import signal
+import lib.signal as signal
 import numpy as np
 import os
 from PySide2.QtCore import QTimer, Signal, Slot, QEventLoop, QObject, QSettings
@@ -52,13 +53,14 @@ class StepperControl():
     ## @param x_pos is the new position of the X-axis which is set.
     def setPositionX(self, x_pos):
         self.position_x = float(x_pos)
+        #self.msg("New XY-position: " + str(self.position_x) + ", " + str(self.position_y))
         return
 
     ## @brief StepperControl::setPositionY(self) sets the position of the Y-axis
     ## @param y_pos is the new position of the Y-axis which is set.  
     def setPositionY(self, y_pos):
         self.position_y = float(y_pos)
-        self.msg("New XY-position: " + str(self.position_x) + ", " + str(self.position_y))
+        #self.msg("New XY-position: " + str(self.position_x) + ", " + str(self.position_y))
         return        
 
     ## @brief StepperControl::homeX(self) creates and executes a homing G-code string for the X-axis.

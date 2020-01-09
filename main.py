@@ -1,15 +1,16 @@
 ## @package main.py
 ## @brief main.py instantiates a main window. It handles message signals for logging. It connects to the PrintHAT pseudo serial port (/tmp/printer). It connects (window widget) signals to their slots and finally it disconnects from the port at exit.
+## @author Gert van Lagen
 
 import os
 import sys
 import time
 import serial_printhat
 import stepper
-import signal
 import numpy as np
 import array
 import ctypes
+import lib.signal as signal
 
 from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit, QFileDialog, QComboBox, QSizePolicy, QDoubleSpinBox, QGraphicsOpacityEffect, QGraphicsDropShadowEffect, QWidget
 from PySide2.QtGui import QFont, QColor, QPalette, QImage, QPixmap
@@ -374,57 +375,19 @@ class MainWindow(QDialog):
         return
 
 ## @brief Scanner is the class which handles the image snapshot recording and processing and updates the video stream
-class Scanner(QWidget):
+class Scanner():
     signals = signal.signalClass()
     preview = None ## @param preview contains the preview image
     capture = None ## @param capture contains the captured image
     captureRaw = None ## @param captureRaw contains the raw captured image
     previewRaw = None ## @param previewRaw contains the raw preview image
-    prevClockTime = None
     DisplayTarget = None
     DisplayWell = None
-    TranslucentWidget = QGraphicsOpacityEffect()
-    GlowEffect = QGraphicsDropShadowEffect()
 
     ## @brief Scanner::__init__() initialises the variables and instances
     def __init__(self, parent=None):
-        super(Scanner, self).__init__(parent)
-        print("Initialisation of class Scanner")
-        ## labels
+        ## @param PixImage is the label on the MainWindow where the videostream is displayed
         self.PixImage = QLabel()
-        
-        ## Spinboxes for image  control
-        self.gammaSpinBox = QDoubleSpinBox(self)
-        self.gammaSpinBoxTitle = QLabel("gamma")
-        self.gammaSpinBoxTitle.setStyleSheet("QLabel {color : white;}")
-        self.gammaSpinBox.setMinimum(0.0)
-        self.gammaSpinBox.setMaximum(5.0)
-        self.gammaSpinBox.setSingleStep(0.1)
-        self.gammaSpinBox.setValue(1.0)
-        self.claheSpinBox = QDoubleSpinBox(self)
-        self.claheSpinBoxTitle = QLabel("clahe")
-        self.claheSpinBoxTitle.setStyleSheet("QLabel {color : white;}")
-        self.claheSpinBox.setMinimum(0.0)
-        self.claheSpinBox.setMaximum(10.0)
-        self.claheSpinBox.setSingleStep(0.1)
-        
-        ## Define and apply graphic effects for overlaying widgets
-        self.GlowEffect.setColor(QColor("#000000"))
-        self.GlowEffect.setBlurRadius(0)
-        self.GlowEffect.setOffset(1, 1)
-        self.TranslucentWidget.setOpacity(0.1)
-        self.gammaSpinBoxTitle.setGraphicsEffect(QGraphicsDropShadowEffect(self.GlowEffect))
-        self.claheSpinBoxTitle.setGraphicsEffect(QGraphicsDropShadowEffect(self.GlowEffect))
-        self.gammaSpinBoxTitle.setGraphicsEffect(QGraphicsOpacityEffect(self.TranslucentWidget))
-        self.claheSpinBoxTitle.setGraphicsEffect(QGraphicsOpacityEffect(self.TranslucentWidget))
-        self.gammaSpinBox.setGraphicsEffect(QGraphicsOpacityEffect(self.TranslucentWidget))
-        self.claheSpinBox.setGraphicsEffect(QGraphicsOpacityEffect(self.TranslucentWidget))
-        
-        ## Install event filter to make overlaying widgets opaque while hovering over
-        self.gammaSpinBoxTitle.installEventFilter(self)
-        self.claheSpinBoxTitle.installEventFilter(self)
-        self.gammaSpinBox.installEventFilter(self)
-        self.claheSpinBox.installEventFilter(self)
         return
 
     ## @brief MainWindow::createVideoGroupBox(self) creates the groupbox and the widgets in it which are used for displaying vido widgets.
@@ -469,6 +432,7 @@ class Scanner(QWidget):
 
     ## @brief Scanner::prvUpdate(self, image=None) updates the preview image on the QLabel widget of the MainWindow
     ## @param image is the new image to show
+    ## @todo check necessity  of raw update functions
     @Slot(np.ndarray)
     def prvUpdate(self, image=None):
         if not (image is None):
@@ -481,18 +445,15 @@ class Scanner(QWidget):
                 cv2.circle(image, (self.DisplayWell[0], self.DisplayWell[1]), self.DisplayWell[2], (255,0,0), 1)
             height, width = image.shape[:2] ## get dimensions
             
-            ## creating QImage without ctypes causes memory leaks
+            ## @note Creating QImage without ctypes causes memory leaks. This is a PySide bug
             ch = ctypes.c_char.from_buffer(image.data, 0)
             rcount = ctypes.c_long.from_address(id(ch)).value
             qImage = QImage(ch, width, height, width * 3, QImage.Format_RGB888) ## Convert from OpenCV to PixMap
             ctypes.c_long.from_address(id(ch)).value = rcount
 
+            ## Update the preview
             self.PixImage.setPixmap(QPixmap(qImage))
             self.PixImage.show()
-            self.gammaSpinBox.raise_()
-            self.claheSpinBoxTitle.raise_()
-            self.gammaSpinBox.raise_()
-            self.claheSpinBox.raise_()
             self.signals.previewUpdated.emit()
 
     ## @brief Scanner::capUpdate(self, image=None) updates the image when a new one is available and emits a captureUpdated signal.
@@ -520,15 +481,6 @@ class Scanner(QWidget):
             self.previewRaw = image
             self.signals.previewRawUpdated.emit()
 
-    ## @brief kickTimer measures the past time between two ready preview frames of the PiVideoStream class
-    @Slot()
-    def kickTimer(self):
-        clockTime = current_milli_time()
-        if self.prevClockTime is not None:
-            timeDiff = clockTime - self.prevClockTime
-            #self.msg("Frame delay: " + " {:04d}".format(round(timeDiff)) + "ms")
-        self.prevClockTime = clockTime
- 
 ################################ MAIN APPLICATION ################################
 ## @brief main application of the well plate reader system. Instantiates the MainWindow().
 # It connects to the /tmp/printer pseudo serial link. Instantiates StepperControl class for the XY movement control and the StepperWellPositioning class for positioning the wells under the camera.
@@ -539,9 +491,6 @@ if __name__ == '__main__':
     
     ## Instantiate MainWindow and app
     app = QApplication([])
-
-    ## @todo make signals based on signal.py
-    #signals = ObjectSignals()
 
     ## @param mwi is the MainWindow application.
     mwi = MainWindow()
@@ -556,53 +505,20 @@ if __name__ == '__main__':
     ## @param stepper_well_positioning is the positioning instance of the wells making use of the steppers control class.
     stepper_well_positioning = stepper.StepperWellPositioning(steppers)
 
-    ##--------------------NEW IMAGE SOFTWARE--------------------##
-    ## @todo commenting 
-    Image_Processor = ImageProcessor()
+    ## @param Cam_Capturestream records images from the pi camera
     Cam_Capturestream = PiVideoStream(resolution=(int(mwi.settings.value("Camera/width")), int(mwi.settings.value("Camera/height"))), monochrome=True, framerate=int(mwi.settings.value("Camera/framerate")), effect='blur', use_video_port=bool(mwi.settings.value("Camera/use_video_port")))
+    
+    ## @param Image_Processor processes the images recorded by the PiVideoStream instance 
+    Image_Processor = ImageProcessor()
 
+    ## Start threads
     Cam_Capturestream.start(QThread.HighPriority)
     Image_Processor.start(QThread.HighPriority)
 
+    ## Connect image signals to designated functions
     Cam_Capturestream.signals.prvReady.connect(lambda: Image_Processor.update(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
     Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.capUpdate(Image_Processor.image))
     Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.prvUpdate(Image_Processor.image))
-
-    ##------------------END NEW IMAGE SOFTWARE------------------##
-
-    ## @param Cam_Capturestream
-    #Cam_Capturestream = PiVideoStream(resolution=(int(mwi.settings.value("Camera/width")), int(mwi.settings.value("Camera/height"))), monochrome=True, framerate=int(mwi.settings.value("Camera/framerate")), effect='blur', use_video_port=bool(mwi.settings.value("Camera/use_video_port")))
-
-    ## @param Enhancer_Capture is the image processing thread
-    #OLD# Enhancer_Preview = ImgEnhancer()
-    #OLD# Enhancer_Preview.start(QThread.HighPriority) ## GUI depends on this thread
-    #OLD# Enhancer_Capture = ImgEnhancer()
-    #OLD# Enhancer_Capture.start()
-    #OLD# Cam_Capturestream.start(QThread.HighPriority)
-    
-    ## @param Thread_List is a list containing all threads
-    #OLD# Thread_List = [Enhancer_Preview, Enhancer_Capture] ## Cam_Capturestream
-
-    ## Connect video/image stream to processing Qt.BlockingQueuedConnection or QueueConnection?
-    #OLD# Cam_Capturestream.PrvReady.connect(lambda: Enhancer_Preview.imgUpdate(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
-
-    ## Connect video/image stream to processing Qt.BlockingQueuedConnection or QueueConnection?
-    #OLD# Cam_Capturestream.PrvReady.connect(lambda: mwi.Well_Scanner.prvRawUpdate(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
-
-    ## Stream images to main window
-    #OLD# Enhancer_Preview.ready.connect(lambda: mwi.Well_Scanner.prvUpdate(Enhancer_Preview.image), type=Qt.QueuedConnection)
-
-    ## Connect video/image stream to processing Qt.BlockingQueuedConnection or QueueConnection?
-    #OLD# Cam_Capturestream.CapReady.connect(lambda: Enhancer_Capture.imgUpdate(Cam_Capturestream.CaptureFrame), type=Qt.BlockingQueuedConnection)
-
-    ## Connect video/image stream to processing Qt.BlockingQueuedConnection or QueueConnection?
-    #OLD# Cam_Capturestream.CapReady.connect(lambda: mwi.Well_Scanner.capRawUpdate(Cam_Capturestream.CaptureFrame), type=Qt.BlockingQueuedConnection)
-
-    ## Stream images to main window
-    #OLD# Enhancer_Capture.ready.connect(lambda: mwi.Well_Scanner.capUpdate(Enhancer_Capture.image), type=Qt.QueuedConnection)
-
-    ## Measure time delay
-    #OLD# Cam_Capturestream.PrvReady.connect(mwi.Well_Scanner.kickTimer)
 
     ## Signal slot connections
     mwi.b_firmware_restart.clicked.connect(steppers.firmwareRestart)
@@ -628,28 +544,7 @@ if __name__ == '__main__':
     mwi.Well_Scanner.signals.mes.connect(mwi.LogWindowInsert)
     Cam_Capturestream.signals.mes.connect(mwi.LogWindowInsert)
 
-    #for Thread in Thread_List:
-    #    Thread.message.connect(mwi.LogWindowInsert)
-    #Enhancer_Preview.message.disconnect(mwi.LogWindowInsert)
-    #Enhancer_Capture.message.disconnect(mwi.LogWindowInsert)
-
-    ## All objects and threads have been instantiated and connected, connect the closing slots
-    ## for a gracefull shutdown of the application upon window closing.
-    ## @todo understand: Recipes invoked when MainWindow is closed, note that scheduler stops other threads.
-    #OLD# for Thread in Thread_List:
-    #OLD#     mwi.closing.windowClosing.connect(Thread.close)
-
-    ## Hold GUI idle untill preview image has been captured
-    #OLD# while Enhancer_Preview is None:
-    #OLD#     mwi.wait_ms(10)
-
     ret = app.exec_()
-
-    ## Wait for one second for each thread to exit.
-    #OLD# for Thread in Thread_List:
-    #OLD#     if Thread is not None:
-    #OLD#         print(Thread)
-    #OLD#         Thread.wait(1000)
 
     # stops the motors and disconnects from pseudo serial link /tmp/printer at exit
     steppers.PrintHAT_serial.disconnect()

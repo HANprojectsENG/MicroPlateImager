@@ -1,4 +1,6 @@
-#Makefile for doxygen documentation
+## @brief Makefile for doxygen documentation
+## @author Gert van Lagen
+
 
 DOCS_DIR ="./Documentation"
 

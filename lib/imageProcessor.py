@@ -11,7 +11,7 @@ from PySide2.QtWidgets import *
 import numpy as np
 import cv2
 import traceback
-import signal
+import lib.signal as signal
 from lib.imageEnhancer import ImageEnhancer
 from lib.imageSegmenter import ImageSegmenter
 from lib.BlobDetector import BlobDetector
@@ -66,7 +66,7 @@ class ImageProcessor(QThread):
                 self.msg('I: {} busy, frame dropped'.format(self.name))
             elif image is not None:
                 # we have a new image
-                self.image = image #.copy()        
+                self.image = image     
                 self.start()
                 
         except Exception as err:
