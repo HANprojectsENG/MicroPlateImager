@@ -15,7 +15,6 @@ import lib.signal as signal
 from lib.imageEnhancer import ImageEnhancer
 from lib.imageSegmenter import ImageSegmenter
 from lib.BlobDetector import BlobDetector
-from lib.objectSignals import ObjectSignals
 from PySide2.QtCore import QThread, Slot
 
 

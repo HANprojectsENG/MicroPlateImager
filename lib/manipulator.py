@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from PySide2.QtCore import *
-from lib.objectSignals import ObjectSignals
 import time
 import lib.signal as signal
 

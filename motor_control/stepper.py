@@ -3,7 +3,7 @@
 ## @author Gert van Lagen
 
 import main
-import serial_printhat
+import motor_control.serial_printhat as serial_printhat
 import lib.signal as signal
 import numpy as np
 import os

@@ -5,8 +5,8 @@
 import os
 import sys
 import time
-import serial_printhat
-import stepper
+import motor_control.serial_printhat as serial_printhat
+import motor_control.stepper as stepper
 import numpy as np
 import array
 import ctypes
@@ -352,15 +352,15 @@ class MainWindow(QDialog):
     ## @brief MainWindow::openSettingsIniFile(self) opens the initialisation file with the technical settings of the device.
     def openSettingsIniFile(self):
         print("\nDEBUG: in function MainWindow::openSettingsIniFile()")
-        self.settings = QSettings(os.path.dirname(os.path.realpath(__file__)) + "/settings.ini",  QSettings.IniFormat)
-        self.msg("Opened settingsfile: " + os.path.dirname(os.path.realpath(__file__)) + "/settings.ini\n")
+        self.settings = QSettings(os.path.dirname(os.path.realpath(__file__)) + "/system_config/settings.ini",  QSettings.IniFormat)
+        self.msg("Opened settingsfile: " + os.path.dirname(os.path.realpath(__file__)) + "/system_config/settings.ini\n")
         return 
 
     ## @brief MainWindow::openBatchIniFile(self) opens the initialisation file with the batch process settings of the device and wells.
     def openBatchIniFile(self):
         print("\nDEBUG: in function MainWindow::openBatchIniFile()")
-        self.settings_batch = QSettings(os.path.dirname(os.path.realpath(__file__)) + "/batch.ini",  QSettings.IniFormat)
-        self.msg("Opened batch file: " + os.path.dirname(os.path.realpath(__file__)) + "/batch.ini\n")
+        self.settings_batch = QSettings(os.path.dirname(os.path.realpath(__file__)) + "/system_config/batch.ini",  QSettings.IniFormat)
+        self.msg("Opened batch file: " + os.path.dirname(os.path.realpath(__file__)) + "/system_config/batch.ini\n")
         return 
     
     ## @brief mainWindow::doxygen(self) generates Doxygen documentation and opens a chromium-browser with the ./Documentation/html/index.html documentation website.
