@@ -1,6 +1,5 @@
 ## @package main.py
 ## @brief main.py instantiates a main window. It handles message signals for logging. It connects to the PrintHAT pseudo serial port (/tmp/printer). It connects (window widget) signals to their slots and finally it disconnects from the port at exit.
-## @author Gert van Lagen
 
 import os
 import sys
@@ -24,6 +23,7 @@ current_milli_time = lambda: int(round(time.time() * 1000))
 
 ## @brief MainWindow(QDialog) instantiates a main window. It consists of a manual control groupbox in which the user can control the steppers of the plate reader manually. Furthermore a groupbox with batch control widgets is created. A groupbox with log window provides runtime debug information. A groupbox with a camerastream widget shows the snapshots created by the well.
 ## @param QDialog is used as the window is a user interactive GUI.
+## @author Gert van Lagen
 class MainWindow(QDialog):
     signals = signal.signalClass() # message signal
     settings = None
@@ -375,6 +375,7 @@ class MainWindow(QDialog):
         return
 
 ## @brief Scanner is the class which handles the image snapshot recording and processing and updates the video stream
+## @author Robin Meekers
 class Scanner():
     signals = signal.signalClass()
     preview = None ## @param preview contains the preview image
@@ -383,6 +384,9 @@ class Scanner():
     previewRaw = None ## @param previewRaw contains the raw preview image
     DisplayTarget = None
     DisplayWell = None
+    calibration_msg = str
+    positioner_msg = str
+    batchrun_msg = str
 
     ## @brief Scanner::__init__() initialises the variables and instances
     def __init__(self, parent=None):
@@ -429,6 +433,62 @@ class Scanner():
             self.msg("Generated snapshot: " + str(filename))
             cv2.imwrite(filename, self.capture)
         return
+
+    @Slot(str)
+    def snapshotRequestedCalibrator(self, message):
+        ## Set the info emitted by the calibrator.
+        self.calibration_msg = str(message)
+        ## Connect the capture ready signal to trigger the creation of a new frame.
+        self.captureUpdated.connect(self.snapshotCalibrator)
+
+    @Slot()
+    def snapshotCalibrator(self):
+        if not (self.capture is None):
+            if not os.path.exists("snapshots_calibration"):
+                os.mkdir("snapshots_calibration")
+            filename = ' snapshots_calibration/HTSD_Snapshots_' + str(current_milli_time()) + "_" + str(self.callibration_msg) + '.png'
+            print(filename)
+            cv2.imwrite(filename, self.capture)
+            # Disconnect the capture ready signal to only create snapshots when they are requested.
+            self.signals.captureUpdated.disconnect(self.snapshot_calibrator)
+            self.signals.signal_rdy_calibrator.emit()
+
+    @Slot(str)
+    def snapshotRequestedPositioner(self, message):
+        ## Set the info emitted by the calibrator
+        self.positioner_msg = str(message)
+        self.msg("Snapshot request received, slot snapshotRequestedPositioner called")
+        ## Connect the capture ready signal to trigger the creation of a new frame.
+        self.signals.previewUpdated.connect(self.snapshotPositioner)
+
+    ## @todo check if self.preview or self.capture has to be emitted
+    @Slot()
+    def snapshotPositioner(self):
+        if not (self.capture is None):
+            ## Disconnect the capture ready signal to only create snapshots when they are requested.
+            print("Snapshot produced")
+            self.signals.previewUpdated.disconnect(self.snapshotPositioner)
+            self.signals.signal_rdy_positioner.emit(self.preview)
+
+    @Slot(str)
+    def snapshotRequestedBatchRun(self, message):
+        ## Set the info emitted by the calibrator.
+        self.batchrun_msg = str(message)
+        ## Connect the capture ready signal to trigger the creation of a new frame.
+        self.captureUpdated.connect(self.snapshot_BatchRun)
+
+    @Slot()
+    def snapshotBatchRun(self):
+        if not (self.capture is None):
+            self.signals.captureUpdated.disconnect(self.snapshotBatchRun)
+            if not os.path.exists("snapshot_run"):
+                os.mkdir("snapshot_run")
+            if not os.path.exists("snapshot_run/" + self.batchrun_msg):
+                os.makedirs("snapshot_run/" + self.batchrun_msg)
+            filename = ' snapshot_run/' + self.batchrun_msg + '/HTSD_Snapshot_' + str(current_milli_time()) + '.png'
+            print(filename)
+            cv2.imwrite(filename, self.capture)
+            self.signals.signal_rdy_batchrun.emit()
 
     ## @brief Scanner::prvUpdate(self, image=None) updates the preview image on the QLabel widget of the MainWindow
     ## @param image is the new image to show
@@ -481,6 +541,16 @@ class Scanner():
             self.previewRaw = image
             self.signals.previewRawUpdated.emit()
 
+    @Slot(tuple)
+    def set_displaytarget(self, target_information):
+        self.DisplayTarget = target_information
+        return
+
+    @Slot(tuple)
+    def set_displaywell(self, target_information):
+        self.DisplayWell = target_information
+        return
+
 ################################ MAIN APPLICATION ################################
 ## @brief main application of the well plate reader system. Instantiates the MainWindow().
 # It connects to the /tmp/printer pseudo serial link. Instantiates StepperControl class for the XY movement control and the StepperWellPositioning class for positioning the wells under the camera.
@@ -503,7 +573,7 @@ if __name__ == '__main__':
     steppers.PrintHAT_serial.connect("/tmp/printer")
     
     ## @param stepper_well_positioning is the positioning instance of the wells making use of the steppers control class.
-    stepper_well_positioning = stepper.StepperWellPositioning(steppers)
+    stepper_well_positioning = stepper.StepperWellPositioning(steppers, mwi.Well_Map)
 
     ## @param Cam_Capturestream records images from the pi camera
     Cam_Capturestream = PiVideoStream(resolution=(int(mwi.settings.value("Camera/width")), int(mwi.settings.value("Camera/height"))), monochrome=True, framerate=int(mwi.settings.value("Camera/framerate")), effect='blur', use_video_port=bool(mwi.settings.value("Camera/use_video_port")))
@@ -519,6 +589,12 @@ if __name__ == '__main__':
     Cam_Capturestream.signals.prvReady.connect(lambda: Image_Processor.update(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
     Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.capUpdate(Image_Processor.image))
     Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.prvUpdate(Image_Processor.image))
+
+    stepper_well_positioning.signals.target_located.connect(mwi.Well_Scanner.set_displaytarget)
+    stepper_well_positioning.signals.well_located.connect(mwi.Well_Scanner.set_displaywell)
+
+    stepper_well_positioning.signals.snapshot_requested.connect(mwi.Well_Scanner.snapshotRequestedPositioner)
+    mwi.Well_Scanner.signals.signal_rdy_positioner.connect(stepper_well_positioning.snapshot_confirmed)
 
     ## Signal slot connections
     mwi.b_firmware_restart.clicked.connect(steppers.firmwareRestart)

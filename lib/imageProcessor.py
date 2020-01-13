@@ -135,7 +135,7 @@ class WellPositionEvaluator(QThread):
         # The radius' are just initial values and will be reset once the first circle was found at the home position.
         self.circle_maxRadius = int((self.img_height/2)) # maximum circle radius is one that covers the entire height
         self.circle_minRadius = int((self.img_height/2) * 0.7) # minimum circle size covers 70% of img height
-        self.circle_minDistance - int(self.img_height/480) # find as many circles as reasonably possible
+        self.circle_minDistance = int(self.img_height/480) # find as many circles as reasonably possible
 
     ## @todo format commenting below
     ## Finds the position error by finding the well bottom centroid.
@@ -188,7 +188,8 @@ class WellPositionEvaluator(QThread):
         ## where lower is better. Apply a threshold on found objects,
         ## Must have a minimum to prevent false negatives and maximum area to prevent false positives.
         best_score = sys.maxsize
-        _,contours,_ = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        #_,contours,_ = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        contours,_ = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         for i, c in enumerate(contours):
             area = cv2.contourArea(c)
             if area > int((self.img_width/3) * (self.img_height/3)):

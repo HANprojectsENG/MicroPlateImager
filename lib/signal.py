@@ -11,10 +11,26 @@ class signalClass(QObject):
     finished = Signal()
     imageUpdate = Signal()
     resultBlobs = Signal(np.ndarray, list)
-    windowClosing = Signal()
+
+    ## Scanner
     prvReady = Signal()
     capReady = Signal()
     previewUpdated = Signal()
     captureUpdated = Signal()
     previewRawUpdated = Signal()
     captureRawUpdated = Signal()
+    signal_rdy_calibrator = Signal() # snapshot taken signal
+    signal_rdy_positioner = Signal(np.ndarray) # snapshot taken signal
+    signal_rdy_batchrun = Signal()    
+
+    ## Main Window
+    windowClosing = Signal()
+    
+    ## Well position evaluator
+    snapshot_requested = Signal(str)
+    process_active = Signal()
+    process_inactive = Signal()
+    target_located = Signal(tuple)
+    well_located = Signal(tuple)
+
+    
