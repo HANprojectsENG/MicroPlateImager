@@ -32,9 +32,6 @@ class PiYArray(PiArrayOutput):
 class PiVideoStream(QThread):
     name = "PiVideoStream"
     signals = signal.signalClass()
-    #message = signal.signalClass()
-    #prvReady = signal.signalClass()
-    #CapReady =  signal.signalClass()
     pause = False
     CaptureStream = None
     PreviewStream = None

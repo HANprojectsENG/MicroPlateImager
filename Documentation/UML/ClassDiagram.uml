@@ -9,7 +9,7 @@ title Well plate reader - class diagram
 '-------------------------------------------------------------main.py
 
 package main.py #AAAAAA {
-	class MainWindow #FF5555  {
+	class MainWindow #ffff55  {
 		+ settings = QSettings
 		+ settings_batch = QSettings
 		+ Well_Map: numpy.array
@@ -19,18 +19,32 @@ package main.py #AAAAAA {
 		+ createBatchGroupBox(self): self.batchGroupBox
 		+ createManualGroupBox(self): self.manualGroupBox
 		+ createLogWindow(self): self.logGroupBox
-		+ createVideoWindow(self): self.videoGroupBox
+		' + createVideoWindow(self): self.videoGroupBox
 		+ wellInitialisation(self)
 		+ openSettingsIniFile(self)
 		+ openBatchIniFile(self)
 		'
 		--Signals--
-		+ message: signalCommunication
+		+ signals: signalCommunication
 		'
 		--Slots--
 		+ LogWindowInsert(self, message)
 		+ doxygen(self)
+	}
 
+	class Scanner #FF55FF {
+		+ preview: numpy.array
+		+ capture: numpy.array
+		+ __init__(self)
+		+ createVideoWindow(self)
+		+ msg(self, message)
+		'
+		--Signals--
+		+ signals: signalCommunication
+		--Slots--
+		+ reader(self)
+		+ prvUpdate(self, image=None
+		+ capUpdate(self, image=None))
 	}
 }
 
@@ -63,6 +77,10 @@ package serial_printhat.py #AAAAAA {
 
 '-------------------------------------------------------------
 package stepper.py #AAAAAA {
+	class BatchProcessor #FF5555 {
+
+	}
+	
 	class StepperControl #55FF55 {
 		- self.position_x: float
 		- self.position_y: float
@@ -111,13 +129,101 @@ package stepper.py #AAAAAA {
 	}	
 }
 
-'-------------------------------------------------------------Communication
+package PiCam.py #AAAAAA {
+	class PiYArray #55FF55 {
+		+ __init__(self, camera, size)
+		+ flush(self)
+	}
+
+	class PiVideoStream #5555FF {
+		+ CaptureStream: picamera.capture_continuous
+		+ PreviewStream: picamera.capture_continuous
+		+ CaptureArray: PiYArray
+		+ PreviewArray: PiYArray
+		+ CaptureFrame: numpy.array
+		+ PreviewFrame: numpy.array
+		+ __init(self, resolution, monochrome, framerate, effect, use_video_port)
+		+ msg(self, message)
+		+ run(self)
+		+ initCamera(self, resolution, monochrome, framerate, effect, use_video_port)
+		' 
+		--Signals--
+		+ signals: signal.signalClass()
+		' 
+		--Slots--
+		+ stop(self)
+		+ changeCameraSettings(self, resolution, framerate, format, effect, use_video_port)
+	}
+}
+
+package imageProcessor.py #AAAAAA {
+	class ImageProcessor #55ff55 {
+		+ __init__(self)
+		+ __del__(self)
+		+ msg(self, message)
+		' 
+		--Signals--
+		+ signals: signal.signalClass()
+		'
+		--Slots--
+		+ update(self, image=None)
+		+ run(self)
+		+ stop(self)
+		+ setDetector(self, val)
+}
+
+	class WellPositionEvaluator #ff5555 {
+		+ __init__(self)
+		+ evaluate(self)
+	}
+}
+package imageEnhancer.py #AAAAAA {
+	class ImageEnhancer #55ffff {
+		+ __init__(self, *args, **kwargs)
+		+ __del__ (self)
+		+ start(self, Image)
+		+ adjust_gamma(image, gamma=1.0)
+		' 
+		--Slots--
+		+ setRotateAngle(self, val)
+		+ setGamma(self, val)
+		+ setClaheClipLimit(self, val)
+		+ setCropXp1(self, val)
+		+ setCropXp2(self, val)
+		+ setCropYp1(self, val)
+		+ setCropYp2(self, val)
+	}
+}
+
+package imageSegmenter.py #AAAAAA {
+	class ImageSegmenter #5555ff {
+		+ __init__(self, *args, **kwargs)
+		+ __del__(self
+		+ start(self, Image)
+		+ moving_average(x, N=5)
+		+ find1DGrid(data, N)
+	}
+
+}
+
+'-------------------------------------------------------------Notes
+note "PreviewFrame and CaptureFrame upon result signal" as N1
+ImageProcessor .. N1
+N1 .. Scanner
+
+note "Process picture on PrvReady signal" as N2
+PiVideoStream ..right. N2
+N2 .. ImageProcessor
 
 '-------------------------------------------------------------arrows
 StepperControl -down-* " 1 " StepperWellPositioning
 signalCommunication -right-* " 1 " StepperControl
 signalCommunication -right-* " 1 " StepperWellPositioning
 signalCommunication -right-* " 1 " MainWindow
+Scanner -right-* " 1 " MainWindow
+PiYArray -up-* " 2 " PiVideoStream
 GcodeSerial -down-* StepperControl
+ImageEnhancer -up-* ImageProcessor
+ImageSegmenter -right-* ImageProcessor
 
 @enduml	

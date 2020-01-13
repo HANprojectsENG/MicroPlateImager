@@ -121,7 +121,7 @@ class ImageProcessor(QThread):
         self.gridDetection = val        
 
 ## @brief class description
-## @author Robin Meelkers
+## @author Robin Meekers
 class WellPositionEvaluator(QThread):
     img_width = None
     img_height = None 
@@ -190,7 +190,28 @@ class WellPositionEvaluator(QThread):
         best_score = sys.maxsize
         _,contours,_ = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         for i, c in enumerate(contours):
-            area - cv2.contourArea(c)
+            area = cv2.contourArea(c)
+            if area > int((self.img_width/3) * (self.img_height/3)):
+                perimeter = cv2.arcLength(c, True)
+                roundness = 4 * np.pi * area / perimeter ** 2
+                m = cv2.moments(c)
+                eccentricity = ((m['nu20'] - m['nu02']) ** 2 + 4 * m['nu11'] ** 2) / (m['nu20'] + m['nu02']) ** 2
+                score = (1 - roundness + eccentricity) / 2
+                if score < best_score:
+                    best_score = score
+                    best_match = c
+                    best_area = int(area)
+                    best_radius = int(math.sqrt(area/np.pi))
 
+        if best_match is not None:
+            M = cv2.moments(best_match)
+            cX = int(M["m10"] / M["m00"] + 0.5)
+            cY = int(M["m01"] / M["m00"] + 0.5)
+            centroid = (cX, cY)
+            best_match = np.subtract(centroid, target)
+            error = (best_match, best_area, best_radius)
+            return (error)
+        else:
+            return 0, 0, -1, -1
             
 
