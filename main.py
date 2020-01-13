@@ -569,6 +569,9 @@ if __name__ == '__main__':
     ## @param steppers is the XY stepper motor control object.
     steppers = stepper.StepperControl()
     
+    ## connect STM message signal to readPort function
+    steppers.PrintHAT_serial.signals.stm_data.connect(steppers.PrintHAT_serial.readPort)
+
     ## Connect steppers to printhat virtual port (this links the klipper software too).
     steppers.PrintHAT_serial.connect("/tmp/printer")
     

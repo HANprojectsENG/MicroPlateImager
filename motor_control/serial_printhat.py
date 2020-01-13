@@ -63,8 +63,8 @@ class GcodeSerial:
         print("\nDEBUG: in function ser_comm::connect(port)")
         try:
             ## @param self.serial is the serial instance.
-            self.serial = serial.Serial(port, timeout=1.0)
-
+            self.serial = serial.Serial(port, timeout=0.005)
+            
             ## Open the serial port if it is not opened already.
             if not self.serial.is_open:
                 print("\nERROR: Cannot connect to device on port {}".format(port))
@@ -83,6 +83,8 @@ class GcodeSerial:
             try:
                 gcode_byte_array = bytearray(gcode_string, 'utf-8')
                 self.serial.write(gcode_byte_array)
+                if self.serial.inWaiting:
+                    self.signals.stm_data.emit()
             except Exception as e:
                 self.msg(e)
         else:
@@ -93,14 +95,18 @@ class GcodeSerial:
     # @return data is the read data from the port.
     # @todo Make a signal triggered read action.
     def readPort(self):
-        self.msg("Please wait, reading data from STM...")
-        print("\nDEBUG: in function ser_comm::readPort()")
+        #self.msg("Please wait, reading data from STM...")
         self.wait_ms(1)
+        ## --OLD--
+        empty = "b\'\'"
         data = self.serial.readline()
         bytes_left = self.serial.inWaiting
         if bytes_left:
             data += self.serial.readline()
-        self.msg(data)
+        
+        read = str(data)
+        if not (read.find(empty) >= 0):
+            self.msg(read)
         return data
 
     ## @brief Gcode_serial::wait_ms(self, milliseconds) is a delay function.

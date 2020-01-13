@@ -169,7 +169,7 @@ class WellPositionEvaluator(QThread):
             for (x, y, r) in circles:
                 target_error = np.subtract((x,y), target)
                 if best_radius < r:
-                    best_match - target_error
+                    best_match = target_error
                     best_area = int(math.pi * r * r)
                     best_radius = r 
             error = (best_match, best_area, best_radius)

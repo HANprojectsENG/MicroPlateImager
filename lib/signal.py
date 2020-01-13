@@ -32,5 +32,8 @@ class signalClass(QObject):
     process_inactive = Signal()
     target_located = Signal(tuple)
     well_located = Signal(tuple)
+    
+    ## STM data available
+    stm_data = Signal()
 
     
