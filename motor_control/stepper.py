@@ -122,11 +122,22 @@ class StepperControl():
     ## @param y_pos is the desired Y-position
     def gotoXY(self, x_pos, y_pos):
         print("in functionStepperControl::gotoXY")
+        read = str
+        confirmation = 'ok'
+        confirmation_counter = 0
         if self.PrintHAT_serial.getConnectionState():
             gcode_string = "G0 X" + str(x_pos) + " Y" + str(y_pos) + "\r\n"
             wait_for_finishing = "M400\r\n"
             self.PrintHAT_serial.executeGcode(gcode_string)
-            self.PrintHAT_serial.executeGcode(wait_for_finishing)
+            #self.PrintHAT_serial.executeGcode(wait_for_finishing)
+            
+            read = str(self.PrintHAT_serial.readPort())
+            #while confirmation_counter < 2:
+            #    read = str(self.PrintHAT_serial.readPort())
+            #    if read.find(confirmation, 0, len(read)) >= 0:
+            #        self.msg("Homing confirmed by STM")
+            #        confirmation_counter = confirmation_counter + 1
+            
             self.setPositionX(x_pos)
             self.setPositionY(y_pos)
         else:
@@ -296,18 +307,15 @@ class StepperWellPositioning():
         if self.WPE is None:
             ## define the resolution of the received images to be entered into the evaluator.
             self.snapshot_request()
-            print(self.image)
             self.WPE_target = (int(self.image.shape[1] / 2), int(self.image.shape[0] / 2))
             self.WPE = imageProcessor.WellPositionEvaluator((self.image.shape[0], self.image.shape[1]))
         if row == 0 or column == 0: # don' t move to location, just evaluate the position.
             if not self.goto_target():
-                self.msg("First goto_target didn't work")
                 self.set_current_well(None, None) # never reached reference point
                 self.Stopped = True
                 self.signals.process_inactive.emit()
                 return False
             else:
-                self.msg("First goto_target did work")
                 self.signals.process_inactive.emit()
                 return True
         else:
@@ -317,9 +325,10 @@ class StepperWellPositioning():
             
             if current_row is None or current_column is None:
                 ## Need to go to home position first
-                self.msg("Position is undefined. Moveing to home first")
+                self.msg("Current position unknown. Moving to home...")
                 self.stepper_control.homeXY()
-            
+                self.msg("Looking for light source...")
+
                 ## Arrived at home, move to first well.
                 ## The exact centre of the image can more easily be determined at the home position,
                 ## as there is no distortion in the image by light refracting.
@@ -334,7 +343,7 @@ class StepperWellPositioning():
                 self.WPE.circle_maxRadius = int(self.WPE_targetRadius) ## The well can never be larger than the diaphragm of the light source.
                 # goto well with ... mm for x and y axis using the Well_Map
                 self.stepper_control.gotoXY(column, row)
-                self.wait_ms(500)
+                self.wait_ms(1500)
                 
                 ## Arrived at location, use machine vision to correct position if necessary.
                 if not self.goto_target():
