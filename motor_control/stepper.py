@@ -130,14 +130,14 @@ class StepperControl():
             wait_for_finishing = "M400\r\n"
             self.PrintHAT_serial.executeGcode(gcode_string)
             self.PrintHAT_serial.executeGcode(wait_for_finishing)
-            
+            self.moveConfirmed = False
             read = str(self.PrintHAT_serial.readPort())
-            while not (read.find(confirmation, 0, len(read)) >= 0):
-                self.msg("Waiting for move confirmation of STM")
+            while (read.find(confirmation, 0, len(read)) <= 0):
+                print("Waiting for gotoXY move confirmation")
                 read = str(self.PrintHAT_serial.readPort())
                 if read.find(confirmation, 0, len(read)) >= 0:
-                    self.msg("Move confirmed")
-            moveConfirmed = True
+                    self.msg("Move confirmed by STM")
+                    self.moveConfirmed = True
             
             self.setPositionX(x_pos)
             self.setPositionY(y_pos)
@@ -377,7 +377,6 @@ class StepperWellPositioning():
 
         while True:
             if self.stepper_control.moveConfirmed is True:
-                self.stepper_control.moveConfirmed = False
                 self.snapshot_request()
                 WPE_Error = self.WPE.evaluate(self.image, self.WPE_target)
                 if WPE_Error[1] <= 0: ## Possibly something wrong with captured frame, retry with another snapshot
@@ -391,13 +390,13 @@ class StepperWellPositioning():
                     self.msg("Well found at (" + str(WPE_Error[0][0]) + " | " + str(WPE_Error[0][1]) + ")")
                     self.signals.well_located.emit((self.WPE_target[0]+WPE_Error[0][0], self.WPE_target[1]+WPE_Error[0][1], WPE_Error[2]))
                     error_count = 0
-                    if (abs(WPE_Error[0][0]) < (self.image.shape[0] / 120) and abs(WPE_Error[0][1]) < (self.image.shape[0] / 120)) or (loops_ >50): ## No more adjustments to make or system is oscilating
-                        if loops_ > 50: ## Check if image is still of reasonable quality.
-                            if (WPE_Error[1] < int(self.image_area*0.55) or abs(WPE_Error[0][1]) >= (self.image.shape[0] / 60) or abs(WPE_Error[0][1]) >= (self.image.spahe[0] / 60)):
-                                ## Found circle covers less than 40% of the image or to far off.
-                                self.msg("Found circle covers less than 40 percent of the image or to far off.")
-                                return True#False
-                        break
+                    #if (abs(WPE_Error[0][0]) < (self.image.shape[0] / 120) and abs(WPE_Error[0][1]) < (self.image.shape[0] / 120)) or (loops_ >50): ## No more adjustments to make or system is oscilating
+                    #    if loops_ > 50: ## Check if image is still of reasonable quality.
+                    #        if (WPE_Error[1] < int(self.image_area*0.55) or abs(WPE_Error[0][1]) >= (self.image.shape[0] / 60) or abs(WPE_Error[0][1]) >= (self.image.spahe[0] / 60)):
+                    #            ## Found circle covers less than 40% of the image or to far off.
+                    #            self.msg("Found circle covers less than 40 percent of the image or to far off.")
+                    #            return True#False
+                    #    break
                 ## Position correction calculation and execution
                 if abs(WPE_Error[0][0]) >= (self.image.shape[0] / 120):
                     controller_column_output = float(WPE_Error[0][0]/50)
@@ -410,16 +409,19 @@ class StepperWellPositioning():
                 self.msg("controller_column_output: " + str(controller_column_output))
                 self.msg("controller_row_output: " + str(controller_row_output))
                 column, row = self.get_current_well()
-                
-                self.stepper_control.gotoXY((float(column)+float(controller_column_output)), (float(row) + float(controller_row_output)))
-                
+
+                if abs(WPE_Error[0][0]) >= (self.image.shape[0] / 120) or abs(WPE_Error[0][1]) >= (self.image.shape[0] / 120):
+                    self.stepper_control.gotoXY((float(column)+float(controller_column_output)), (float(row) + float(controller_row_output)))
+                else:
+                    break
                 loops_ = loops_ + 1
+            else:
+                print("Waiting for move confirmation in goto_target function")
         return True
 
     ## @todo substitude this function into goto_well(self, row, column)
     def snapshot_request(self):
-        self.signals.snapshot_requested.emit(str((1,1)))
-        #self.msg("Emitted snapshot request str((1, 1))")
+            self.signals.snapshot_requested.emit(str((1,1)))
 
     def snapshot_await(self):
         self.SnapshotTaken = False
