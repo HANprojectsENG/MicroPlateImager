@@ -326,8 +326,8 @@ class MainWindow(QDialog):
         for row in range(1, self.Well_Map.shape[0], 1):
             for column in range(1, self.Well_Map.shape[1], 1):
                 self.Well_Map[row][column] = (
-                    float(self.settings_batch.value("Plate/posColumnA1")) + ((column-1) * float(self.settings_batch.value("Plate/deltaColumnWell"))),
-                    float(self.settings_batch.value("Plate/posRowA1")) + ((row-1) * float(self.settings_batch.value("Plate/deltaRowWell")))
+                    (float(self.settings_batch.value("Plate/posColumn00")) + float(self.settings_batch.value("Plate/p1")) + ((column-1) * float(self.settings_batch.value("Plate/p2")))),
+                    (float(self.settings_batch.value("Plate/posRow00")) + float(self.settings_batch.value("Plate/p3")) + ((row-1) * float(self.settings_batch.value("Plate/p4"))))
                 )
                 
         ## load the wells to process
@@ -457,7 +457,7 @@ class Scanner():
     def snapshotRequestedPositioner(self, message):
         ## Set the info emitted by the calibrator
         self.positioner_msg = str(message)
-        self.msg("Snapshot request received, slot snapshotRequestedPositioner called")
+        self.msg("Snapshot request received")
         ## Connect the capture ready signal to trigger the creation of a new frame.
         self.signals.previewUpdated.connect(self.snapshotPositioner)
 
@@ -466,7 +466,6 @@ class Scanner():
     def snapshotPositioner(self):
         if not (self.capture is None):
             ## Disconnect the capture ready signal to only create snapshots when they are requested.
-            print("Snapshot produced")
             self.signals.previewUpdated.disconnect(self.snapshotPositioner)
             self.signals.signal_rdy_positioner.emit(self.preview)
 
@@ -500,7 +499,7 @@ class Scanner():
             if len(image.shape) < 3:
                 image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB) ## convert to color image
             if self.DisplayTarget is not None:
-                cv2.circle(image, (self.DisplayTarget[0], self.DisplayTarget[1]), self.DisplayTarget[2], (0,0,255), 1)
+                cv2.circle(image, (self.DisplayTarget[0], self.DisplayTarget[1]), self.DisplayTarget[2], (0,255,0), 1)
             if self.DisplayWell is not None:
                 cv2.circle(image, (self.DisplayWell[0], self.DisplayWell[1]), self.DisplayWell[2], (255,0,0), 1)
             height, width = image.shape[:2] ## get dimensions
@@ -564,7 +563,7 @@ if __name__ == '__main__':
 
     ## @param mwi is the MainWindow application.
     mwi = MainWindow()
-    mwi.show()
+    mwi.showMaximized()
 
     ## @param steppers is the XY stepper motor control object.
     steppers = stepper.StepperControl()
@@ -598,6 +597,9 @@ if __name__ == '__main__':
 
     stepper_well_positioning.signals.snapshot_requested.connect(mwi.Well_Scanner.snapshotRequestedPositioner)
     mwi.Well_Scanner.signals.signal_rdy_positioner.connect(stepper_well_positioning.snapshot_confirmed)
+
+    ## Initial snapshot request to get an image in the buffer
+    #stepper_well_positioning.snapshot_request()
 
     ## Signal slot connections
     mwi.b_firmware_restart.clicked.connect(steppers.firmwareRestart)
