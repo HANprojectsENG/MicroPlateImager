@@ -186,7 +186,7 @@ class StepperControl():
             wait_for_finishing = "M400\r\n"
             self.PrintHAT_serial.executeGcode(gcode_string)
             self.PrintHAT_serial.executeGcode(wait_for_finishing)
-            
+
             read = str(self.PrintHAT_serial.readPort())
             while (read.find(confirmation, 0, len(read)) <= 0) and self.move_confirmed is False:
                 print("Waiting for moveToWell move confirmation")
@@ -453,6 +453,7 @@ class StepperWellPositioning():
         controller_row_output=0
 
         while True:
+            self.wait_ms(500)
             if self.stepper_control.move_confirmed is True:
                 self.snapshot_request()
                 WPE_Error = self.WPE.evaluate(self.image, self.WPE_target)
@@ -482,7 +483,7 @@ class StepperWellPositioning():
                 else:
                     controller_column_output = 0
                 if abs(WPE_Error[0][1]) >= (self.image.shape[0] / 120):
-                    controller_row_output = float(WPE_Error[0][1]/50)
+                    controller_row_output = (float(WPE_Error[0][1]/50))
                 else:
                     controller_row_output = 0
                 #self.msg("controller_column_output: " + str(controller_column_output))
