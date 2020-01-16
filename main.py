@@ -576,6 +576,7 @@ if __name__ == '__main__':
     
     ## @param stepper_well_positioning is the positioning instance of the wells making use of the steppers control class.
     stepper_well_positioning = stepper.StepperWellPositioning(steppers, mwi.Well_Map)
+    steppers.signals.well_unknown.connect(stepper_well_positioning.reset_current_well)
 
     ## @param Cam_Capturestream records images from the pi camera
     Cam_Capturestream = PiVideoStream(resolution=(int(mwi.settings.value("Camera/width")), int(mwi.settings.value("Camera/height"))), monochrome=True, framerate=int(mwi.settings.value("Camera/framerate")), effect='blur', use_video_port=bool(mwi.settings.value("Camera/use_video_port")))

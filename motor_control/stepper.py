@@ -130,6 +130,7 @@ class StepperControl():
             wait_for_finishing = "M400\r\n"
             self.PrintHAT_serial.executeGcode(gcode_string)
             self.PrintHAT_serial.executeGcode(wait_for_finishing)
+            self.signals.well_unknown.emit()
             self.moveConfirmed = False
             read = str(self.PrintHAT_serial.readPort())
             while (read.find(confirmation, 0, len(read)) <= 0):
@@ -141,6 +142,33 @@ class StepperControl():
             
             self.setPositionX(x_pos)
             self.setPositionY(y_pos)
+        else:
+            self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
+        return 
+
+    ## @brief StepperControl::gotoXY(self, x_pos, y_pos) creates and executes a move G-code string for the XY-axis
+    ## @param x_pos is the desired X-position
+    ## @param y_pos is the desired Y-position
+    def moveToWell(self, column, row):
+        print("in functionStepperControl::gotoTargetWell")
+        read = str
+        confirmation = 'ok'
+        if self.PrintHAT_serial.getConnectionState():
+            gcode_string = "G0 X" + str(column) + " Y" + str(row) + "\r\n"
+            wait_for_finishing = "M400\r\n"
+            self.PrintHAT_serial.executeGcode(gcode_string)
+            self.PrintHAT_serial.executeGcode(wait_for_finishing)
+            self.moveConfirmed = False
+            read = str(self.PrintHAT_serial.readPort())
+            while (read.find(confirmation, 0, len(read)) <= 0):
+                print("Waiting for gotoXY move confirmation")
+                read = str(self.PrintHAT_serial.readPort())
+                if read.find(confirmation, 0, len(read)) >= 0:
+                    self.msg("Move confirmed by STM")
+                    self.moveConfirmed = True
+            
+            self.setPositionX(column)
+            self.setPositionY(row)
         else:
             self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
         return 
@@ -313,55 +341,53 @@ class StepperWellPositioning():
             self.WPE_target = (int(self.image.shape[1] / 2), int(self.image.shape[0] / 2))
             self.WPE = imageProcessor.WellPositionEvaluator((self.image.shape[0], self.image.shape[1]))
 
-            ## self.msg("Attempting to move to: (" + str(row) + " | " + str(column) + ") at: (" + str(self.Well_Map[int(row)][1][0]) + " | " + str(self.Well_Map[1][int(column)][1]) + ").")
-            self.msg("current well: " + str(self.get_current_well()))
-            current_row, current_column = self.get_current_well()
-            
-            if current_row is None or current_column is None:
-                ## Need to go to home position first
-                self.msg("Current position unknown. Moving to home...")
-                self.stepper_control.homeXY()
-                self.wait_ms(500)
-                self.msg("Looking for light source...")
+        ## self.msg("Attempting to move to: (" + str(row) + " | " + str(column) + ") at: (" + str(self.Well_Map[int(row)][1][0]) + " | " + str(self.Well_Map[1][int(column)][1]) + ").")
+        self.msg("current well: " + str(self.get_current_well()))
+        current_row, current_column = self.get_current_well()
+        
+        if current_row is None or current_column is None:
+            ## Need to go to home position first
+            self.msg("Current position unknown. Moving to home...")
+            self.stepper_control.homeXY()
+            self.wait_ms(500)
+            self.msg("Looking for light source...")
 
-                ## Arrived at home, move to first well.
-                ## The exact centre of the image can more easily be determined at the home position,
-                ## as there is no distortion in the image by light refracting.
-                self.snapshot_request()
-                WPE_Error = self.WPE.evaluate(self.image, (int(self.image.shape[1] / 2), int(self.image.shape[0] / 2)))
-                self.msg("Found light-source at: (" + str(WPE_Error[0][0]) + " | " + str(WPE_Error[0][1]) + "). Radius: " + str(WPE_Error[2]))
-                
-                self.WPE_targetRadius = WPE_Error[2]
-                self.WPE_target = (int(self.image.shape[1] / 2) + WPE_Error[0][0], int(self.image.shape[0] / 2) + WPE_Error[0][1])
-                
-                self.signals.target_located.emit((self.WPE_target[0], self.WPE_target[1], self.WPE_targetRadius))
-                
-                self.WPE.circle_minRadius = int(self.WPE_targetRadius * 0.8) ## Roughly the amount remaining if the target is on the edge between wells.
-                self.WPE.circle_maxRadius = int(self.WPE_targetRadius) ## The well can never be larger than the diaphragm of the light source.
-                
-                self.stepper_control.gotoXY(column, row)
-                #self.wait_ms(1500)
-                self.set_current_well(column, row)
-                
-                ## Arrived at location, use machine vision to correct position if necessary.
-                if not self.goto_target():
-                    self.set_current_well(None, None) ## Never reached reference point
-                    self.Stopped = True
-                    self.signals.process_inactive.emit()
-                    return False
-                else:
-                    self.set_current_well(column, row)
-            ## position known
+            ## Arrived at home, move to first well.
+            ## The exact centre of the image can more easily be determined at the home position,
+            ## as there is no distortion in the image by light refracting.
+            self.snapshot_request()
+            WPE_Error = self.WPE.evaluate(self.image, (int(self.image.shape[1] / 2), int(self.image.shape[0] / 2)))
+            self.msg("Found light-source at: (" + str(WPE_Error[0][0]) + " | " + str(WPE_Error[0][1]) + "). Radius: " + str(WPE_Error[2]))
+            
+            self.WPE_targetRadius = WPE_Error[2]
+            self.WPE_target = (int(self.image.shape[1] / 2) + WPE_Error[0][0], int(self.image.shape[0] / 2) + WPE_Error[0][1])
+            
+            self.signals.target_located.emit((self.WPE_target[0], self.WPE_target[1], self.WPE_targetRadius))
+            
+            self.WPE.circle_minRadius = int(self.WPE_targetRadius * 0.8) ## Roughly the amount remaining if the target is on the edge between wells.
+            self.WPE.circle_maxRadius = int(self.WPE_targetRadius) ## The well can never be larger than the diaphragm of the light source.
+            
+            self.stepper_control.moveToWell(column, row)
+            self.set_current_well(column, row)
+            
+            ## Arrived at location, use machine vision to correct position if necessary.
+            if not self.goto_target():
+                self.set_current_well(None, None) ## Never reached reference point
+                self.Stopped = True
+                self.signals.process_inactive.emit()
+                return False
             else:
-                self.stepper_control.gotoXY(column, row)
-                #self.wait_ms(1500)
-                if not self.goto_target():
-                    self.set_current_well(None, None) ## Never reached reference point
-                    self.Stopped = True
-                    self.signals.process_inactive.emit()
-                    return False
-                else:
-                    self.set_current_well(column, row)
+                self.set_current_well(column, row)
+        ## position known
+        else:
+            self.stepper_control.moveToWell(column, row)
+            if not self.goto_target():
+                self.set_current_well(None, None) ## Never reached reference point
+                self.Stopped = True
+                self.signals.process_inactive.emit()
+                return False
+            else:
+                self.set_current_well(column, row)
 
         if row != self.current_well_row or column != self.current_well_column:
             self.msg("moving from: (" + str(self.current_well_row) + " | " + str(self.current_well_column) + ") to: (" + str(row) + " | " + str(column) + ")")
@@ -390,13 +416,14 @@ class StepperWellPositioning():
                     self.msg("Well found at (" + str(WPE_Error[0][0]) + " | " + str(WPE_Error[0][1]) + ")")
                     self.signals.well_located.emit((self.WPE_target[0]+WPE_Error[0][0], self.WPE_target[1]+WPE_Error[0][1], WPE_Error[2]))
                     error_count = 0
-                    #if (abs(WPE_Error[0][0]) < (self.image.shape[0] / 120) and abs(WPE_Error[0][1]) < (self.image.shape[0] / 120)) or (loops_ >50): ## No more adjustments to make or system is oscilating
-                    #    if loops_ > 50: ## Check if image is still of reasonable quality.
+                    if (abs(WPE_Error[0][0]) < (self.image.shape[0] / 120) and abs(WPE_Error[0][1]) < (self.image.shape[0] / 120)) or (loops_ >30): ## No more adjustments to make or system is oscilating
+                        if loops_ > 30: ## Check if image is still of reasonable quality.
+                            self.msg("More than 50 correction loops")
                     #        if (WPE_Error[1] < int(self.image_area*0.55) or abs(WPE_Error[0][1]) >= (self.image.shape[0] / 60) or abs(WPE_Error[0][1]) >= (self.image.spahe[0] / 60)):
                     #            ## Found circle covers less than 40% of the image or to far off.
                     #            self.msg("Found circle covers less than 40 percent of the image or to far off.")
-                    #            return True#False
-                    #    break
+                    #            return False
+                        break
                 ## Position correction calculation and execution
                 if abs(WPE_Error[0][0]) >= (self.image.shape[0] / 120):
                     controller_column_output = float(WPE_Error[0][0]/50)
@@ -411,7 +438,7 @@ class StepperWellPositioning():
                 column, row = self.get_current_well()
 
                 if abs(WPE_Error[0][0]) >= (self.image.shape[0] / 120) or abs(WPE_Error[0][1]) >= (self.image.shape[0] / 120):
-                    self.stepper_control.gotoXY((float(column)+float(controller_column_output)), (float(row) + float(controller_row_output)))
+                    self.stepper_control.moveToWell((float(column)+float(controller_column_output)), (float(row) + float(controller_row_output)))
                 else:
                     break
                 loops_ = loops_ + 1
