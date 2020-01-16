@@ -457,7 +457,6 @@ class Scanner():
     def snapshotRequestedPositioner(self, message):
         ## Set the info emitted by the calibrator
         self.positioner_msg = str(message)
-        self.msg("Snapshot request received")
         ## Connect the capture ready signal to trigger the creation of a new frame.
         self.signals.previewUpdated.connect(self.snapshotPositioner)
 
@@ -570,12 +569,14 @@ if __name__ == '__main__':
     
     ## connect STM message signal to readPort function
     steppers.PrintHAT_serial.signals.stm_data.connect(steppers.PrintHAT_serial.readPort)
+    steppers.PrintHAT_serial.signals.confirmation.connect(steppers.setConfirms)
 
     ## Connect steppers to printhat virtual port (this links the klipper software too).
     steppers.PrintHAT_serial.connect("/tmp/printer")
     
     ## @param stepper_well_positioning is the positioning instance of the wells making use of the steppers control class.
     stepper_well_positioning = stepper.StepperWellPositioning(steppers, mwi.Well_Map)
+    stepper_well_positioning.signals.first_move.connect(steppers.PrintHAT_serial.setFirstMove)
     steppers.signals.well_unknown.connect(stepper_well_positioning.reset_current_well)
 
     ## @param Cam_Capturestream records images from the pi camera
@@ -599,10 +600,16 @@ if __name__ == '__main__':
     stepper_well_positioning.signals.snapshot_requested.connect(mwi.Well_Scanner.snapshotRequestedPositioner)
     mwi.Well_Scanner.signals.signal_rdy_positioner.connect(stepper_well_positioning.snapshot_confirmed)
 
-    ## Initial snapshot request to get an image in the buffer
-    #stepper_well_positioning.snapshot_request()
-
     ## Signal slot connections
+    ## Messages
+    mwi.signals.mes.connect(mwi.LogWindowInsert)
+    steppers.PrintHAT_serial.signals.mes.connect(mwi.LogWindowInsert)
+    steppers.signals.mes.connect(mwi.LogWindowInsert)
+    stepper_well_positioning.signals.mes.connect(mwi.LogWindowInsert)
+    mwi.Well_Scanner.signals.mes.connect(mwi.LogWindowInsert)
+    Cam_Capturestream.signals.mes.connect(mwi.LogWindowInsert)
+
+    ## Buttons
     mwi.b_firmware_restart.clicked.connect(steppers.firmwareRestart)
     mwi.b_stm_read.clicked.connect(steppers.PrintHAT_serial.readPort)
     #mwi.b_start_batch.clicked.connect(mwi.startBatch)
@@ -619,13 +626,7 @@ if __name__ == '__main__':
     mwi.b_emergency_break.clicked.connect(steppers.emergencyBreak)
     mwi.b_goto_well.clicked.connect(lambda: stepper_well_positioning.goto_well(mwi.Well_Map[mwi.row_well_combo_box.currentIndex()][1][1], mwi.Well_Map[1][mwi.column_well_combo_box.currentIndex()][0]))
 
-    mwi.signals.mes.connect(mwi.LogWindowInsert)
-    steppers.PrintHAT_serial.signals.mes.connect(mwi.LogWindowInsert)
-    steppers.signals.mes.connect(mwi.LogWindowInsert)
-    stepper_well_positioning.signals.mes.connect(mwi.LogWindowInsert)
-    mwi.Well_Scanner.signals.mes.connect(mwi.LogWindowInsert)
-    Cam_Capturestream.signals.mes.connect(mwi.LogWindowInsert)
-
+    
     ret = app.exec_()
 
     # stops the motors and disconnects from pseudo serial link /tmp/printer at exit

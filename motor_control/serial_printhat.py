@@ -7,12 +7,14 @@ import serial
 import lib.signal as signal
 
 from PySide2.QtWidgets import *
-from PySide2.QtCore import QTimer, QEventLoop
+from PySide2.QtCore import QTimer, QEventLoop#, QMutex
 
 ## @brief class GcodeSerial handles the /tmp/printer pseudoserial connection and writes incoming G-code. It also reads responses of the serial port.
 class GcodeSerial:
     ## @param message is the class message signal used to display the result in the window log using its slot function.
     signals = signal.signalClass()
+
+    first_move = False
 
     ## @param ins is the number of instances created of GcodeSerial. This may not exceed 1.
     ins = 0
@@ -45,6 +47,10 @@ class GcodeSerial:
             self.signals.mes.emit(self.__class__.__name__ + ": " + str(message))
         return
     
+    def setFirstMove(self):
+        self.first_move = True
+        return
+
     ## @brief GcodeSerial::getConnectionState(self) is a self.connection_state getter.
     # @return self.connection_state
     def getConnectionState(self):
@@ -96,9 +102,10 @@ class GcodeSerial:
     # @todo Make a signal triggered read action.
     def readPort(self):
         #self.msg("Please wait, reading data from STM...")
+        #self.read_mutex.lock()
         self.wait_ms(1)
-        ## --OLD--
         empty = "b\'\'"
+        confirmation = 'ok'
         data = self.serial.readline()
         bytes_left = self.serial.inWaiting
         if bytes_left:
@@ -107,6 +114,10 @@ class GcodeSerial:
         read = str(data)
         if not (read.find(empty) >= 0):
             self.msg(read)
+        
+        if read.find(confirmation, 0, len(read)) >= 0 and self.first_move is True:
+            self.msg("Found confirmation in readPort")
+            self.signals.confirmation.emit()
         return data
 
     ## @brief Gcode_serial::wait_ms(self, milliseconds) is a delay function.

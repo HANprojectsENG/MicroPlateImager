@@ -36,6 +36,8 @@ class signalClass(QObject):
     
     ## STM data available
     stm_data = Signal()
+    confirmation = Signal()
+    first_move = Signal()
 
 
     
