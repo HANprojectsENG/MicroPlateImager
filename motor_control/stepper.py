@@ -403,6 +403,7 @@ class StepperWellPositioning():
                 
                 self.WPE_targetRadius = WPE_Error[2]
                 self.WPE_target = (int(self.image.shape[1] / 2) + WPE_Error[0][0], int(self.image.shape[0] / 2) + WPE_Error[0][1])
+                self.msg("WPE_target: " + str(self.WPE_target[0]) + " | " + str(self.WPE_target[1]))
                 
                 self.signals.target_located.emit((self.WPE_target[0], self.WPE_target[1], self.WPE_targetRadius))
                 
@@ -451,11 +452,17 @@ class StepperWellPositioning():
         WPE_Error = None
         controller_column_output=0
         controller_row_output=0
-
+        new_column = 0
+        new_row = 0
+        offset_counter = True
         while True:
-            self.wait_ms(500)
-            if self.stepper_control.move_confirmed is True:
+            if (self.stepper_control.move_confirmed is True):
+                self.wait_ms(4000) # Wait for stabilization
                 self.snapshot_request()
+                self.wait_ms(1000) # Wait for snapshot
+                target_row = self.WPE_target[0]+10
+                target_column = self.WPE_target[1]-10
+                WPE_target = (target_row, target_column)
                 WPE_Error = self.WPE.evaluate(self.image, self.WPE_target)
                 if WPE_Error[1] <= 0: ## Possibly something wrong with captured frame, retry with another snapshot
                     self.msg("Possibly something wrong with captured frame, retry with another snapshot")
@@ -467,6 +474,7 @@ class StepperWellPositioning():
                 else:
                     self.msg("Well found at (" + str(WPE_Error[0][0]) + " | " + str(WPE_Error[0][1]) + ")")
                     self.signals.well_located.emit((self.WPE_target[0]+WPE_Error[0][0], self.WPE_target[1]+WPE_Error[0][1], WPE_Error[2]))
+
                     error_count = 0
                     if (abs(WPE_Error[0][0]) < (self.image.shape[0] / 120) and abs(WPE_Error[0][1]) < (self.image.shape[0] / 120)) or (loops_ >15): ## No more adjustments to make or system is oscilating
                         #if loops_ > 15: ## Check if image is still of reasonable quality.
@@ -477,21 +485,25 @@ class StepperWellPositioning():
                             #return True ## should be false in the end software
                         self.msg("Returning from positioner controller, loops: " + str(loops_))
                         return True
-                ## Position correction calculation and execution
-                if abs(WPE_Error[0][0]) >= (self.image.shape[0] / 120):
-                    controller_column_output = float(WPE_Error[0][0]/50)
-                else:
-                    controller_column_output = 0
-                if abs(WPE_Error[0][1]) >= (self.image.shape[0] / 120):
-                    controller_row_output = (float(WPE_Error[0][1]/50))
-                else:
-                    controller_row_output = 0
-                #self.msg("controller_column_output: " + str(controller_column_output))
-                #self.msg("controller_row_output: " + str(controller_row_output))
+
+                controller_column_output = float(WPE_Error[0][0]) / float(30.0)
+                controller_row_output = float(WPE_Error[0][1])/float(30)
+
+                self.msg("Error column: " + str(WPE_Error[0][0]) + " | " + str(controller_column_output))
+                self.msg("controller_row_output: " + str(WPE_Error[0][1]) + " | " + str(controller_row_output))
                 column, row = self.get_current_well()
 
+                #if abs(WPE_Error[0][0]) >= (self.image.shape[0] / 120) or abs(WPE_Error[0][1]) >= (self.image.shape[0] / 120):
                 if abs(WPE_Error[0][0]) >= (self.image.shape[0] / 120) or abs(WPE_Error[0][1]) >= (self.image.shape[0] / 120):
-                    self.stepper_control.moveToWell((float(column)+float(controller_column_output)), (float(row) + float(controller_row_output)))
+                    new_column = float(column)+float(controller_column_output)
+                    new_row = float(row) + float(controller_row_output)
+                    #if offset_counter is True:
+                    #    new_column = new_column-2
+                    #    new_row = new_row+2
+                    #    offset_counter = False
+                    self.stepper_control.moveToWell(new_column, new_row)
+                    self.set_current_well(new_column, new_row)
+                    
                 else:
                     break
                 loops_ = loops_ + 1

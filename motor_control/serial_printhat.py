@@ -116,7 +116,6 @@ class GcodeSerial:
             self.msg(read)
         
         if read.find(confirmation, 0, len(read)) >= 0 and self.first_move is True:
-            self.msg("Found confirmation in readPort")
             self.signals.confirmation.emit()
         return data
 
