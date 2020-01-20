@@ -14,6 +14,7 @@ class GcodeSerial:
     ## @param message is the class message signal used to display the result in the window log using its slot function.
     signals = signal.signalClass()
 
+    ## @param first_move is set to True if the first move of the batch process is performed. When not using this boolean, the movement will be confirmed by this serial port to quick and the analysation of the well position starts to early.
     first_move = False
 
     ## @param ins is the number of instances created of GcodeSerial. This may not exceed 1.
@@ -47,6 +48,7 @@ class GcodeSerial:
             self.signals.mes.emit(self.__class__.__name__ + ": " + str(message))
         return
     
+    ## @brief GcodeSerial::setFirstMove(self) sets first_move boolean to True.
     def setFirstMove(self):
         self.first_move = True
         return
@@ -90,7 +92,7 @@ class GcodeSerial:
                 gcode_byte_array = bytearray(gcode_string, 'utf-8')
                 self.serial.write(gcode_byte_array)
                 if self.serial.inWaiting:
-                    self.signals.stm_data.emit()
+                    self.signals.stm_read_request.emit()
             except Exception as e:
                 self.msg(e)
         else:
@@ -102,7 +104,6 @@ class GcodeSerial:
     # @todo Make a signal triggered read action.
     def readPort(self):
         #self.msg("Please wait, reading data from STM...")
-        #self.read_mutex.lock()
         self.wait_ms(1)
         empty = "b\'\'"
         confirmation = 'ok'
@@ -115,6 +116,7 @@ class GcodeSerial:
         if not (read.find(empty) >= 0):
             self.msg(read)
         
+        ## Check if confirmation is stored in data ("ok"). Alse verify if the first movement is already finished in order to avoid to early well analysation.
         if read.find(confirmation, 0, len(read)) >= 0 and self.first_move is True:
             self.signals.confirmation.emit()
         return data

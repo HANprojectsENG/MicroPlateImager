@@ -530,7 +530,7 @@ class Scanner():
             self.captureRaw = image
             self.signals.captureRawUpdated.emit()
 
-    ## @brief Scanner::prvRawUpdate(self, image=None) updates the  raw preview image when a new one is availabe and emits the imageUpdate signal
+    ## @brief Scanner::prvRawUpdate(self, image=None) updates the  raw preview image when a new one is availabe and emits the previewRawUpdated signal
     ## @param image is the new raw image
     @Slot(np.ndarray)
     def prvRawUpdate(self, image=None):
@@ -568,8 +568,8 @@ if __name__ == '__main__':
     steppers = stepper.StepperControl()
     
     ## connect STM message signal to readPort function
-    steppers.PrintHAT_serial.signals.stm_data.connect(steppers.PrintHAT_serial.readPort)
-    steppers.PrintHAT_serial.signals.confirmation.connect(steppers.setConfirms)
+    steppers.PrintHAT_serial.signals.stm_read_request.connect(steppers.PrintHAT_serial.readPort)
+    steppers.PrintHAT_serial.signals.confirmation.connect(steppers.setMoveConfirmed)
 
     ## Connect steppers to printhat virtual port (this links the klipper software too).
     steppers.PrintHAT_serial.connect("/tmp/printer")

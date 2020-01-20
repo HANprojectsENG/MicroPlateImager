@@ -80,7 +80,6 @@ class PiVideoStream(QThread):
                     self.fps.update()
                     if self.startMillis is not None:
                         None
-                        #print(self.name + ": processing delay = " + str(int(round(time.time() * 1000)) - self.startMillis) + " ms")
                     self.startMillis = int(round(time.time() * 1000))
                     self.signals.prvReady.emit()    
                            

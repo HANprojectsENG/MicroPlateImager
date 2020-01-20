@@ -120,7 +120,7 @@ class ImageProcessor(QThread):
     def setDetector(self, val):
         self.gridDetection = val        
 
-## @brief class description
+## @brief class WellPositionEvaluator evaluates the position of circles in the passed image relative to the target position.
 ## @author Robin Meekers
 class WellPositionEvaluator(QThread):
     img_width = None
@@ -137,17 +137,13 @@ class WellPositionEvaluator(QThread):
         self.circle_minRadius = int((self.img_height/2) * 0.7) # minimum circle size covers 70% of img height
         self.circle_minDistance = int(self.img_height/480) # find as many circles as reasonably possible
 
-    ## @todo format commenting below
-    ## Finds the position error by finding the well bottom centroid.
-    ## Args:
-    ## img: 2d grayscale image list
-    ## target: target coordinates (topleft pixel is 0,0)
-    ## Returns: offset tuple (x, y) position error
+    ## @brief WellPositionEvaluator::evaluate(self, source, target=(0,0)) finds the position error by finding the well bottom centroid. 
     ## Find circle(s) using hough transform, and return the circle that is closest to the centre.
-    ## If no circle could be found decrease param2 and increase contrast,
-    ## though this might cause false negatives if it is too low.
+    ## If no circle could be found decrease param2 and increase contrast, though this might cause false negatives if it is too low.
     ## When this still fails, use blob detection and attempt to find a circle like object.
-    ## :param source:
+    ## @param source 2d grayscale image list
+    ## @param target contains the target coordinates (topleft pixel is 0,0)
+    ## @return offset tuple (x, y) position error
     def evaluate(self, source, target=(0, 0)):
         error = None
         best_match = None

@@ -43,10 +43,8 @@ class StepperControl():
 
     def getPositionFromSTM(self):
         if self.PrintHAT_serial.getConnectionState():
-            #self.msg("Retrieving position from STM microcontroller...")
             gcode_string = "M114\r\n"
             self.PrintHAT_serial.executeGcode(gcode_string)
-            #self.PrintHAT_serial.readPort()
         else:
             self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
         return
@@ -65,18 +63,16 @@ class StepperControl():
     ## @param x_pos is the new position of the X-axis which is set.
     def setPositionX(self, x_pos):
         self.position_x = float(x_pos)
-        #self.msg("New XY-position: " + str(self.position_x) + ", " + str(self.position_y))
         return
 
     ## @brief StepperControl::setPositionY(self) sets the position of the Y-axis
     ## @param y_pos is the new position of the Y-axis which is set.  
     def setPositionY(self, y_pos):
         self.position_y = float(y_pos)
-        #self.msg("New XY-position: " + str(self.position_x) + ", " + str(self.position_y))
         return        
 
     @Slot()
-    def setConfirms(self):
+    def setMoveConfirmed(self):
         self.move_confirmed = True
         return
 
@@ -113,34 +109,6 @@ class StepperControl():
             self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
         return
 
-    ## @brief StepperControl::gotoX(self, pos) creates and executes a move G-code string for the X-axis.
-    ## @param x_pos is the desired position
-    ## @depricated this function is not in use
-    def gotoX(self, x_pos):
-        if self.PrintHAT_serial.getConnectionState():
-            gcode_string = "G0 X" 
-            gcode_string += str(x_pos)
-            gcode_string += "\r\n"
-            self.PrintHAT_serial.executeGcode(gcode_string)
-            self.setPositionX(x_pos)
-        else:
-            self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
-        return 
-
-    ## @brief StepperControl::gotoY(self, pos) creates and executes a move G-code string for the Y-axis.
-    ## @param y_pos is the desired position
-    ## @depricated this function is not in use
-    def gotoY(self, y_pos):
-        if self.PrintHAT_serial.getConnectionState():
-            gcode_string = "G0 Y" 
-            gcode_string += str(y_pos)
-            gcode_string += "\r\n"
-            self.PrintHAT_serial.executeGcode(gcode_string)
-            self.setPositionY(y_pos)
-        else:
-            self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
-        return 
-
     ## @brief StepperControl::gotoXY(self, x_pos, y_pos) creates and executes a move G-code string for the XY-axis
     ## @param x_pos is the desired X-position
     ## @param y_pos is the desired Y-position
@@ -157,10 +125,10 @@ class StepperControl():
             self.move_confirmed = False
             read = str(self.PrintHAT_serial.readPort())
             while (read.find(confirmation, 0, len(read)) <= 0):
-                print("Waiting for gotoXY move confirmation")
+                #print("Waiting for gotoXY move confirmation")
                 read = str(self.PrintHAT_serial.readPort())
                 if read.find(confirmation, 0, len(read)) >= 0:
-                    self.msg("Move confirmed by STM")
+                    #self.msg("Move confirmed by STM")
                     self.move_confirmed = True
                 ## If manually confirmed somewhere in software
                 if self.move_confirmed is True:
@@ -189,14 +157,14 @@ class StepperControl():
 
             read = str(self.PrintHAT_serial.readPort())
             while (read.find(confirmation, 0, len(read)) <= 0) and self.move_confirmed is False:
-                print("Waiting for moveToWell move confirmation")
+                #print("Waiting for moveToWell move confirmation")
                 read = str(self.PrintHAT_serial.readPort())
                 ## If manually confirmed somewhere in software
                 if self.move_confirmed is True:
-                    self.msg("Move to well manually confirmed in software")
+                    #self.msg("Move to well manually confirmed in software")
                     break  
                 if read.find(confirmation, 0, len(read)) >= 0:
-                    self.msg("Move confirmed by STM")
+                    #self.msg("Move confirmed by STM")
                     self.move_confirmed = True
                     break  
 
@@ -289,14 +257,13 @@ class StepperControl():
         gcode_string = "M112\r\n"
         self.msg("Emergency break! Restart the firmware usingn the button FIRMWARE_RESTART")
         self.PrintHAT_serial.executeGcode(gcode_string)
+        self.signals.process_inactive.emit() ## Stops current batch process if running
         return
 
 ## @brief StepperWellPositioning(QObject) takes care of the positioning of the wells under the camera.
-## @param QObject is used to be able to use QObject
-## @todo check if param QObject is necessary or if class signalClass() solves the QObject inheritance already.
 class StepperWellPositioning():
     signals = signal.signalClass()
-    stepper_control = None ## object MotorControl class
+    stepper_control = None ## object StepperControl instance
     current_well_row = None
     current_well_column = None
     Well_Map = None
@@ -310,14 +277,15 @@ class StepperWellPositioning():
     WPE_target = None
     WPE_targetRadius = None
 
-    ## @brief StepperWellPositioning(QObject)::__init__ initialises the stepper objects for X and Y axis and initialises the gcodeSerial to the class member variable.
+    ## @brief StepperWellPositioning()::__init__ initialises the stepper objects for X and Y axis and initialises the gcodeSerial to the class member variable.
     ## @param steppers is the StepperControl object representing the X- and Y-axis
+    ## @param Well_data contains the target well specified by the user in the batch.ini file
     def __init__(self, steppers, Well_data):
         self.stepper_control = steppers
         self.Well_Map = Well_data
         return
 
-    ## @brief StepperWellPositioning(QObject)::msg emits the message signal. This emit will be catched by the logging slot function in main.py.
+    ## @brief StepperWellPositioning()::msg emits the message signal. This emit will be catched by the logging slot function in main.py.
     ## @param message is the string message to be emitted.
     @Slot(str)
     def msg(self, message):
@@ -325,12 +293,12 @@ class StepperWellPositioning():
             self.signals.mes.emit(self.__class__.__name__ + ": " + str(message))
         return
 
-    ## @brief StepperWellPositioning(QObject)::reset_current_well(self) sets the current well position (XY) to None
+    ## @brief StepperWellPositioning()::reset_current_well(self) sets the current well position (XY) to None
     def reset_current_well(self):
         self.set_current_well(None, None)
         return
 
-    ## @brief StepperWellPositioning(QObject)::set_current_well(self) sets the current well position.
+    ## @brief StepperWellPositioning()::set_current_well(self) sets the current well position.
     ## @param column is the column or x well coordinate
     ## @param row is the row or y well coordinate
     def set_current_well(self, column, row):
@@ -338,15 +306,15 @@ class StepperWellPositioning():
         self.current_well_row = row
         return
         
-    ## @brief StepperWellPositioning(QObject)::get_current_well(self) is the well position getter.
-    ## @return current_well_column and current_well_row, the XY well position coordinates
+    ## @brief StepperWellPositioning()::get_current_well(self) is the well position getter.
+    ## @return current_well_column (x position in mm from home) and current_well_row (y position in mm from home).
     def get_current_well(self):
         if self.current_well_column == None or self.current_well_row == None:
             self.current_well_column = None
             self.current_well_row = None
         return self.current_well_column, self.current_well_row
 
-    ## @brief StepperWellPositioning(QObject)::wait_ms(self, milliseconds) is a delay function.
+    ## @brief StepperWellPositioning()::wait_ms(self, milliseconds) is a delay function.
     ## @param milliseconds is the number of milliseconds to wait.
     def wait_ms(self, milliseconds):
         GeneralEventLoop = QEventLoop()
@@ -354,24 +322,15 @@ class StepperWellPositioning():
         GeneralEventLoop.exec_()
         return
     
-    ## @brief StepperWellPositioning(QObject)::goto_well(self, x_pos, y_pos) navigates to the desired well.
-    ## @param row is the row at which the well is on the well plate. Changing the row affects the y-axis position.
-    ## @param column is the column at which the well is on the well plate. Changing the row affects the x-axis position.
-    ## @depricated goto_well(_old) is depricated. New version below
-    @Slot()
-    def goto_well_old(self, row, column):
-        self.msg("goto_well at row " + str(row) + ", column:" + str(column))
-        self.stepper_control.gotoXY(column, row)
-        self.set_current_well(column, row)
-        return
-    
-    ## @todo commenting
+    ## @brief StepperWellPositioning()::goto_well(self, row, column): 
     ## @author Robin Meekers
-    ## @author Gert van Lagen (ported to new prototype with PrintHAT)
+    ## @author Gert van Lagen (ported to new prototype which makes use of the Wrecklab PrintHAT)
     @Slot()
     def goto_well(self, row, column):
         self.signals.process_active.emit()
         self.Stopped = False
+
+        ## If the Well Position Evaluator is not initialized.
         if self.WPE is None:
             ## define the resolution of the received images to be entered into the evaluator.
             self.snapshot_request()
@@ -379,16 +338,17 @@ class StepperWellPositioning():
             self.WPE_target = (int(self.image.shape[1] / 2), int(self.image.shape[0] / 2))
             self.WPE = imageProcessor.WellPositionEvaluator((self.image.shape[0], self.image.shape[1]))
 
-        self.msg("current well: " + str(self.get_current_well()))
+        self.msg("Current well: " + str(self.get_current_well()))
         current_row, current_column = self.get_current_well()
         
+        ## Position unknown
         if current_row is None or current_column is None:
             ## Need to go to home position first
             self.msg("Current position unknown. Moving to home...")
             self.stepper_control.homeXY()
 
+            ## If homing is succeeded and confirmed by the STM of the Wrecklab PrintHAT
             if self.stepper_control.homing_confirmed is True:
-                self.msg("Requesting second snapshot after homing confirmation")
                 self.image = None
                 self.snapshot_request()
                 self.snapshot_await()
@@ -410,22 +370,31 @@ class StepperWellPositioning():
                 self.WPE.circle_minRadius = int(self.WPE_targetRadius * 0.8) ## Roughly the amount remaining if the target is on the edge between wells.
                 self.WPE.circle_maxRadius = int(self.WPE_targetRadius) ## The well can never be larger than the diaphragm of the light source.
                 
+                ## Homing succeeded, light source found, lets move to the first target of Well_map
                 self.stepper_control.moveToWell(column, row)
                 self.set_current_well(column, row)
-                self.wait_ms(2000) ## First move (from home position) is the biggest, so too early evaluation, due to fast confirmation response of the PrintHAT STM, could result in a targetcircle placed on the light source.
+                
+                ## Too early evaluation by self.goto_target(), due to fast confirmation response of the PrintHAT STM, could result in a targetcircle placed on the light source.
+                self.wait_ms(2000)
                 self.signals.first_move.emit()
+
                 ## Arrived at location, use machine vision to correct position if necessary.
                 if not self.goto_target():
                     self.msg("Well positioning not succeeded.")
                     self.set_current_well(None, None) ## Never reached reference point
                     self.Stopped = True
                     self.signals.process_inactive.emit()
-                    self.stepper_control.move_confirmed = True ## Manual confirmation needed. STM is to fast for the software to catch the last confirmation.
+
+                    ## Manual confirmation needed. STM is to fast for the software to catch the last confirmation.
+                    self.stepper_control.move_confirmed = True 
                     return False
                 else:
                     self.msg("Well positioning succeeded.")
                     self.set_current_well(column, row)
-                    self.stepper_control.move_confirmed = True ## Manual confirmation needed. STM is to fast for the software to catch the last confirmation.
+
+                    ## Manual confirmation needed. STM is to fast for the software to catch the last confirmation.
+                    self.stepper_control.move_confirmed = True 
+        
         ## position known 
         else:
             self.stepper_control.moveToWell(column, row)
@@ -436,33 +405,45 @@ class StepperWellPositioning():
                 self.set_current_well(None, None) ## Never reached reference point
                 self.Stopped = True
                 self.signals.process_inactive.emit()
-                self.stepper_control.move_confirmed = True ## Manual confirmation needed. STM is to fast for the software to catch the last confirmation.
+
+                ## Manual confirmation needed. STM is to fast for the software to catch the last confirmation.
+                self.stepper_control.move_confirmed = True 
                 return False
             else:
                 self.msg("Well positioning succeeded.")
                 self.set_current_well(column, row)
-                self.stepper_control.move_confirmed = True ## Manual confirmation needed. STM is to fast for the software to catch the last confirmation.
 
+                ## Manual confirmation needed. STM is to fast for the software to catch the last confirmation.
+                self.stepper_control.move_confirmed = True 
+
+        ## Different row?
         if row != self.current_well_row or column != self.current_well_column:
             self.msg("moving from: (" + str(self.current_well_row) + " | " + str(self.current_well_column) + ") to: (" + str(row) + " | " + str(column) + ")")
         return True
 
+    ## @brief StepperWellPositioning()::goto_target(self) evaluates the target circle using class Well_Position_Evaluator, updates the snapshot, 
+    ## and corrects the position of the well while not aligned with the light source.
     def goto_target(self):
         loops_ = 0
         error_count = 0
         WPE_Error = None
-        controller_column_output=0
-        controller_row_output=0
         new_column = 0
         new_row = 0
 
+        ## Do while the well is not aligned with the light source. 
         while True:
             if (self.stepper_control.move_confirmed is True):
+                ## Wait for image to stabilize and request new snapshot
                 self.wait_ms(2500)
                 self.snapshot_request()
-                self.wait_ms(1000) # Wait for snapshot
+                
+                ## Wait for snapshot to be stored in self.image
+                self.wait_ms(1000) 
+
+                ## Evaluate current wellposition relative to the light source.
                 WPE_Error = self.WPE.evaluate(self.image, self.WPE_target)
 
+                ## Area error, surface smaller or equal to 0
                 if WPE_Error[1] <= 0:
                     self.msg("Possibly something wrong with captured frame, retry with another snapshot")
                     error_count = error_count + 1
@@ -474,21 +455,24 @@ class StepperWellPositioning():
                     self.msg("Well found at (" + str(WPE_Error[0][0]) + " | " + str(WPE_Error[0][1]) + ")")
                     self.signals.well_located.emit((self.WPE_target[0]+WPE_Error[0][0], self.WPE_target[1]+WPE_Error[0][1], WPE_Error[2]))
 
+                    ## Some 
                     error_count = 0
                     if (abs(WPE_Error[0][0]) < (self.image.shape[0] / 120) and abs(WPE_Error[0][1]) < (self.image.shape[0] / 120)) or (loops_ >20): ## No more adjustments to make or system is oscilating
-                        if loops_ > 20: ## Check if image is still of reasonable quality.
-                            self.msg("More than 20 correction loops")
+                        if loops_ > 20:
+                            self.msg("More than 20 correction loops, return False")
                             return False
                         self.msg("Returning from positioner controller, loops: " + str(loops_))
                         return True
 
+                ## Define controller variables for column and row | x and y.
                 new_column = float(WPE_Error[0][0]) / float(30.0)
                 new_row = float(WPE_Error[0][1])/float(30.0)
                 column, row = self.get_current_well()
-                #self.msg("Error column: " + str(WPE_Error[0][0]) + " | " + str(new_column))
-                #self.msg("Error row: " + str(WPE_Error[0][1]) + " | " + str(new_row))
                 
+                ## if the error values or column and row are larger or equal to 1/120th of the image height. 
+                ## @note Detection software returned incorrect error. Solved by the small offset (-30 for the column, +30 for the row) added to the error value. 
                 if abs(WPE_Error[0][0]-30) >= (self.image.shape[0] / 120) or abs(WPE_Error[0][1]+30) >= (self.image.shape[0] / 120):
+                    ## @note A small offset had to be added by the column and row controller variables as well
                     new_column = float(column)+float(new_column)-1
                     new_row = float(row) + float(new_row)+1
                     self.stepper_control.moveToWell(new_column, new_row)
@@ -496,15 +480,13 @@ class StepperWellPositioning():
                 else:
                     break
                 loops_ = loops_ + 1
-            else:
-                print("Waiting for move confirmation in goto_target function")
-                #return False
         return True
 
-    ## @todo substitude this function into goto_well(self, row, column)
+    ## @brief StepperWellPositioning()::snapshot_request(self) emits the snapshot_request signal
     def snapshot_request(self):
             self.signals.snapshot_requested.emit(str((1,1)))
 
+    ## @brief StepperWellPositioning()::snapshot_awiat(self) runs an eventloop while the new snapshot is not stored in self.image yet.
     def snapshot_await(self):
         self.SnapshotTaken = False
         while not self.Stopped and not self.SnapshotTaken:
@@ -512,6 +494,8 @@ class StepperWellPositioning():
             QTimer.singleShot(10, self.SnapshotEventLoop.exit)
             self.SnapshotEventLoop.exec_()
 
+    ## @brief StepperWellPositioning()::snapshot_confirmed(self, snapshot) exits the event loop of snapshot_await when the new image is arived. 
+    ## It updates the self.image variable with the new variable and defines the image area and WPE_target. 
     @Slot(np.ndarray)
     def snapshot_confirmed(self, snapshot):
         self.image = snapshot
