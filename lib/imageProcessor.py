@@ -167,6 +167,7 @@ class WellPositionEvaluator(QThread):
             ## store the circle that has the largest radius
             best_radius = 0
             for (x, y, r) in circles:
+                print("target in evaluate: " + str(target[0]) + " | " + str(target[1]))
                 target_error = np.subtract((x,y), target)
                 if best_radius < r:
                     best_match = target_error

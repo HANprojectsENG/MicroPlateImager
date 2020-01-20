@@ -460,10 +460,13 @@ class StepperWellPositioning():
                 self.wait_ms(4000) # Wait for stabilization
                 self.snapshot_request()
                 self.wait_ms(1000) # Wait for snapshot
-                target_row = self.WPE_target[0]+10
-                target_column = self.WPE_target[1]-10
-                WPE_target = (target_row, target_column)
+                #target_row = self.WPE_target[0]+10
+                #target_column = self.WPE_target[1]-10
+                #WPE_target = (target_row, target_column)
                 WPE_Error = self.WPE.evaluate(self.image, self.WPE_target)
+                #error_offset_column = WPE_Error[0][0]-30
+                #error_offset_row = WPE_Error[0][1]+30
+                #WPE_Error = ((error_offset_column, error_offset_row), WPE_Error[1], WPE_Error[2])
                 if WPE_Error[1] <= 0: ## Possibly something wrong with captured frame, retry with another snapshot
                     self.msg("Possibly something wrong with captured frame, retry with another snapshot")
                     error_count = error_count + 1
@@ -494,9 +497,9 @@ class StepperWellPositioning():
                 column, row = self.get_current_well()
 
                 #if abs(WPE_Error[0][0]) >= (self.image.shape[0] / 120) or abs(WPE_Error[0][1]) >= (self.image.shape[0] / 120):
-                if abs(WPE_Error[0][0]) >= (self.image.shape[0] / 120) or abs(WPE_Error[0][1]) >= (self.image.shape[0] / 120):
-                    new_column = float(column)+float(controller_column_output)
-                    new_row = float(row) + float(controller_row_output)
+                if abs(WPE_Error[0][0]-30) >= (self.image.shape[0] / 120) or abs(WPE_Error[0][1]+30) >= (self.image.shape[0] / 120):
+                    new_column = float(column)+float(controller_column_output)-1
+                    new_row = float(row) + float(controller_row_output)+1
                     #if offset_counter is True:
                     #    new_column = new_column-2
                     #    new_row = new_row+2
