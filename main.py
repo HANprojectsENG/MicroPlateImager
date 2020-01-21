@@ -1,15 +1,15 @@
 ## @package main.py
-## @brief main.py instantiates a main window. It handles message signals for logging. It connects to the PrintHAT pseudo serial port (/tmp/printer). It connects (window widget) signals to their slots and finally it disconnects from the port at exit.
+## @brief main.py instantiates a main window. It handles message signals for logging. It connects to the PrintHAT pseudo serial port (/tmp/printer). It connects (window widget and class instance) signals to their slots and finally it disconnects from the port at exit.
 
 import os
 import sys
 import time
-import motor_control.serial_printhat as serial_printhat
-import motor_control.stepper as stepper
-import numpy as np
 import array
 import ctypes
+import numpy as np
 import lib.signal as signal
+import motor_control.stepper as stepper
+import motor_control.serial_printhat as serial_printhat
 
 from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit, QFileDialog, QComboBox, QSizePolicy, QDoubleSpinBox, QGraphicsOpacityEffect, QGraphicsDropShadowEffect, QWidget
 from PySide2.QtGui import QFont, QColor, QPalette, QImage, QPixmap
@@ -31,7 +31,7 @@ class MainWindow(QDialog):
     Well_Map = None
     Well_Targets = None
 
-    ## @brief MainWindow::__init__ initializes the window with widgets, layouts and groupboxes.
+    ## @brief MainWindow::__init__ initializes the window with widgets, layouts and groupboxes and opens initialization files.
     def __init__(self):
         super().__init__()
 
@@ -460,7 +460,6 @@ class Scanner():
         ## Connect the capture ready signal to trigger the creation of a new frame.
         self.signals.previewUpdated.connect(self.snapshotPositioner)
 
-    ## @todo check if self.preview or self.capture has to be emitted
     @Slot()
     def snapshotPositioner(self):
         if not (self.capture is None):
@@ -539,11 +538,15 @@ class Scanner():
             self.previewRaw = image
             self.signals.previewRawUpdated.emit()
 
+    ## @brief Scanner::set_displaytarget(self, target_information) updates the current by opencv detected light source
+    ## @param target_information is the information of the detected object
     @Slot(tuple)
     def set_displaytarget(self, target_information):
         self.DisplayTarget = target_information
         return
 
+    ## @brief Scanner::set_displaywell(self, target_information) updates the current by opencv detected well
+    ## @param target_information is the information of the detected object
     @Slot(tuple)
     def set_displaywell(self, target_information):
         self.DisplayWell = target_information
@@ -551,12 +554,17 @@ class Scanner():
 
 ################################ MAIN APPLICATION ################################
 ## @brief main application of the well plate reader system. Instantiates the MainWindow().
-# It connects to the /tmp/printer pseudo serial link. Instantiates StepperControl class for the XY movement control and the StepperWellPositioning class for positioning the wells under the camera.
-# After that it connects the (window and message) signals to their slots.
-# At exit, it takes care of correct shutdown of the motors and disconnection of the /tmp/printer port and stopping the klipper service.
+## It connects to the /tmp/printer pseudo serial link. Instantiates StepperControl class for the XY movement control and the StepperWellPositioning class for positioning the wells under the camera. 
+## Furthermore the well positioning classes and batch processor class are instantiated.
+## After that it connects the (window and message) signals to their slots and starts the threads.
+## At exit, it takes care of correct shutdown of the motors and disconnection of the /tmp/printer port and stopping the klipper service.
 ##################################################################################
 if __name__ == '__main__':
     
+    ###############################
+    ## --- Main window start --- ##
+    ###############################
+
     ## Instantiate MainWindow and app
     app = QApplication([])
 
@@ -564,44 +572,49 @@ if __name__ == '__main__':
     mwi = MainWindow()
     mwi.showMaximized()
 
-    ## @param steppers is the XY stepper motor control object.
+    #################################
+    ## --- Class instantiation --- ##
+    #################################
+
+    ## @param steppers is the XY stepper motor control object. Contains the serial object PrintHAT_serial which interfaces to the STM
     steppers = stepper.StepperControl()
     
-    ## connect STM message signal to readPort function
-    steppers.PrintHAT_serial.signals.stm_read_request.connect(steppers.PrintHAT_serial.readPort)
-    steppers.PrintHAT_serial.signals.confirmation.connect(steppers.setMoveConfirmed)
-
-    ## Connect steppers to printhat virtual port (this links the klipper software too).
-    steppers.PrintHAT_serial.connect("/tmp/printer")
-    
-    ## @param stepper_well_positioning is the positioning instance of the wells making use of the steppers control class.
+    ## @param stepper_well_positioning is the positioning instance of the wells making use of the steppers control class instance.
     stepper_well_positioning = stepper.StepperWellPositioning(steppers, mwi.Well_Map)
-    stepper_well_positioning.signals.first_move.connect(steppers.PrintHAT_serial.setFirstMove)
-    steppers.signals.well_unknown.connect(stepper_well_positioning.reset_current_well)
 
     ## @param Cam_Capturestream records images from the pi camera
     Cam_Capturestream = PiVideoStream(resolution=(int(mwi.settings.value("Camera/width")), int(mwi.settings.value("Camera/height"))), monochrome=True, framerate=int(mwi.settings.value("Camera/framerate")), effect='blur', use_video_port=bool(mwi.settings.value("Camera/use_video_port")))
     
     ## @param Image_Processor processes the images recorded by the PiVideoStream instance 
     Image_Processor = ImageProcessor()
+    
+    ###############################
+    ## --- Signal connection --- ##
+    ###############################
 
-    ## Start threads
-    Cam_Capturestream.start(QThread.HighPriority)
-    Image_Processor.start(QThread.HighPriority)
+    ## connect STM message signal to readPort function
+    steppers.PrintHAT_serial.signals.stm_read_request.connect(steppers.PrintHAT_serial.readPort)
+    
+    ## Signal if STM message contains confirmation ("ok")
+    steppers.PrintHAT_serial.signals.confirmation.connect(steppers.setMoveConfirmed)
+
+    ## Connect steppers to printhat virtual port (this links the klipper software too).
+    steppers.PrintHAT_serial.connect("/tmp/printer")
+    
+    ## Connections of signals representing positioning and movement information
+    stepper_well_positioning.signals.snapshot_requested.connect(mwi.Well_Scanner.snapshotRequestedPositioner)
+    stepper_well_positioning.signals.first_move.connect(steppers.PrintHAT_serial.setFirstMove)
+    stepper_well_positioning.signals.target_located.connect(mwi.Well_Scanner.set_displaytarget)
+    stepper_well_positioning.signals.well_located.connect(mwi.Well_Scanner.set_displaywell)
+    steppers.signals.well_unknown.connect(stepper_well_positioning.reset_current_well)
+    mwi.Well_Scanner.signals.signal_rdy_positioner.connect(stepper_well_positioning.snapshot_confirmed)
 
     ## Connect image signals to designated functions
     Cam_Capturestream.signals.prvReady.connect(lambda: Image_Processor.update(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
-    Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.capUpdate(Image_Processor.image))
-    Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.prvUpdate(Image_Processor.image))
+    Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.capUpdate(Image_Processor.image)) ## For the capture/snapshot images
+    Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.prvUpdate(Image_Processor.image)) ## Image for the GUI preview (lower resolution)
 
-    stepper_well_positioning.signals.target_located.connect(mwi.Well_Scanner.set_displaytarget)
-    stepper_well_positioning.signals.well_located.connect(mwi.Well_Scanner.set_displaywell)
-
-    stepper_well_positioning.signals.snapshot_requested.connect(mwi.Well_Scanner.snapshotRequestedPositioner)
-    mwi.Well_Scanner.signals.signal_rdy_positioner.connect(stepper_well_positioning.snapshot_confirmed)
-
-    ## Signal slot connections
-    ## Messages
+    ## Class message signals
     mwi.signals.mes.connect(mwi.LogWindowInsert)
     steppers.PrintHAT_serial.signals.mes.connect(mwi.LogWindowInsert)
     steppers.signals.mes.connect(mwi.LogWindowInsert)
@@ -609,7 +622,7 @@ if __name__ == '__main__':
     mwi.Well_Scanner.signals.mes.connect(mwi.LogWindowInsert)
     Cam_Capturestream.signals.mes.connect(mwi.LogWindowInsert)
 
-    ## Buttons
+    ## GUI buttons signal connections
     mwi.b_firmware_restart.clicked.connect(steppers.firmwareRestart)
     mwi.b_stm_read.clicked.connect(steppers.PrintHAT_serial.readPort)
     #mwi.b_start_batch.clicked.connect(mwi.startBatch)
@@ -626,7 +639,18 @@ if __name__ == '__main__':
     mwi.b_emergency_break.clicked.connect(steppers.emergencyBreak)
     mwi.b_goto_well.clicked.connect(lambda: stepper_well_positioning.goto_well(mwi.Well_Map[mwi.row_well_combo_box.currentIndex()][1][1], mwi.Well_Map[1][mwi.column_well_combo_box.currentIndex()][0]))
 
-    
+    ##########################
+    ## --- Thread start --- ##
+    ##########################
+
+    ## Start threads
+    Cam_Capturestream.start(QThread.HighPriority)
+    Image_Processor.start(QThread.HighPriority)
+
+    ########################
+    ## --- Exit stuff --- ##
+    ########################
+
     ret = app.exec_()
 
     # stops the motors and disconnects from pseudo serial link /tmp/printer at exit
