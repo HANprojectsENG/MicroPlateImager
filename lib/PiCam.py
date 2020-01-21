@@ -7,6 +7,8 @@ from PySide2.QtCore import QObject, QThread, QTimer, QEventLoop, Signal, Slot
 from picamera import PiCamera
 from picamera.array import PiRGBArray, PiYUVArray, PiArrayOutput
 import time, datetime
+import os
+import sys
 
 class PiYArray(PiArrayOutput):
     """
@@ -131,6 +133,19 @@ class PiVideoStream(QThread):
         self.initCamera(resolution, framerate, format, effect, use_video_port)
         self.pause = False
         self.start()  # restart thread
+
+    ## @brief PiVideoStream::wait_ms(self, milliseconds) is a delay function.
+    ## @param milliseconds is the number of milliseconds to wait.
+    def wait_ms(self, milliseconds):
+        GeneralEventLoop = QEventLoop()
+        QTimer.singleShot(milliseconds, GeneralEventLoop.exit)
+        GeneralEventLoop.exec_()
+        return
+
+    @Slot()
+    def close(self):
+        self.exit(0)
+        return
 
 class FPS:
 	def __init__(self):

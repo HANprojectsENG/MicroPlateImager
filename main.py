@@ -6,14 +6,16 @@ import sys
 import time
 import array
 import ctypes
+import signal
 import numpy as np
 import lib.signal as signal
 import motor_control.stepper as stepper
+import batch.batch_processor as batch_processor
 import motor_control.serial_printhat as serial_printhat
 
 from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit, QFileDialog, QComboBox, QSizePolicy, QDoubleSpinBox, QGraphicsOpacityEffect, QGraphicsDropShadowEffect, QWidget
 from PySide2.QtGui import QFont, QColor, QPalette, QImage, QPixmap
-from PySide2.QtCore import QSettings, Signal, Slot, Qt, QThread
+from PySide2.QtCore import QSettings, Signal, Slot, Qt, QThread, QEventLoop, QTimer
 
 from lib.checkOS import *
 from lib.imageProcessor import *
@@ -306,6 +308,8 @@ class MainWindow(QDialog):
         return self.logGroupBox
 
     ## @brief MainWindow::wellInitialisation(self) declares and defines the wellpositions in millimeters of the specified targets using the batch initialisation file.
+    ## @author Robin Meekers
+    ## @author Gert van lagen (ported to new well reader prototype software)
     def wellInitialisation(self):
         ## Declare well map
         self.Well_Map = np.empty(
@@ -347,8 +351,17 @@ class MainWindow(QDialog):
             index = index+1
         print("Well targets: ")
         print(self.Well_Targets)
+        print("Well_Map:     ")
+        print(self.Well_Map)
         return
     
+    ## @brief getSec(self, time_str) converts a current_milli_time() string into seconds
+    ## @param time_str is the time string to be converted
+    ## @return time in seconds
+    def getSec(self, time_str):
+        h, m, s = time_str.split(':')
+        return int(h) * 3600 + int(m) * 60 + int(s)
+
     ## @brief MainWindow::openSettingsIniFile(self) opens the initialisation file with the technical settings of the device.
     def openSettingsIniFile(self):
         print("\nDEBUG: in function MainWindow::openSettingsIniFile()")
@@ -588,6 +601,12 @@ if __name__ == '__main__':
     ## @param Image_Processor processes the images recorded by the PiVideoStream instance 
     Image_Processor = ImageProcessor()
     
+    ## @brief
+    ## @todo commenting
+    Batch = batch_processor.BatchProcessor(stepper_well_positioning, mwi.Well_Map, mwi.Well_Targets, str(mwi.settings_batch.value("Run/ID")), str(mwi.settings_batch.value("Run/info")), mwi.getSec(str(mwi.settings_batch.value("Run/duration"))), mwi.getSec(str(mwi.settings_batch.value("Run/interleave"))))
+
+    Thread_List = [stepper_well_positioning, Cam_Capturestream, Image_Processor, Batch]
+
     ###############################
     ## --- Signal connection --- ##
     ###############################
@@ -606,6 +625,8 @@ if __name__ == '__main__':
     stepper_well_positioning.signals.first_move.connect(steppers.PrintHAT_serial.setFirstMove)
     stepper_well_positioning.signals.target_located.connect(mwi.Well_Scanner.set_displaytarget)
     stepper_well_positioning.signals.well_located.connect(mwi.Well_Scanner.set_displaywell)
+    stepper_well_positioning.signals.process_active.connect(stepper_well_positioning.setProcessActive)
+    stepper_well_positioning.signals.process_inactive.connect(stepper_well_positioning.setProcessInactive)
     steppers.signals.well_unknown.connect(stepper_well_positioning.reset_current_well)
     mwi.Well_Scanner.signals.signal_rdy_positioner.connect(stepper_well_positioning.snapshot_confirmed)
 
@@ -621,12 +642,13 @@ if __name__ == '__main__':
     stepper_well_positioning.signals.mes.connect(mwi.LogWindowInsert)
     mwi.Well_Scanner.signals.mes.connect(mwi.LogWindowInsert)
     Cam_Capturestream.signals.mes.connect(mwi.LogWindowInsert)
+    Batch.signals.mes.connect(mwi.LogWindowInsert)
 
     ## GUI buttons signal connections
     mwi.b_firmware_restart.clicked.connect(steppers.firmwareRestart)
     mwi.b_stm_read.clicked.connect(steppers.PrintHAT_serial.readPort)
-    #mwi.b_start_batch.clicked.connect(mwi.startBatch)
-    #mwi.b_stop_batch.clicked.connect(mwi.stopBatch)
+    mwi.b_start_batch.clicked.connect(Batch.startBatch)
+    mwi.b_stop_batch.clicked.connect(Batch.stopBatch)
     mwi.b_snapshot.clicked.connect(lambda: mwi.Well_Scanner.reader())
     mwi.b_doxygen.clicked.connect(mwi.doxygen)
     mwi.b_home_x.clicked.connect(steppers.homeXY)
@@ -638,6 +660,9 @@ if __name__ == '__main__':
     mwi.b_gotoXY.clicked.connect(lambda: steppers.gotoXY(mwi.x_pos.text(), mwi.y_pos.text()))
     mwi.b_emergency_break.clicked.connect(steppers.emergencyBreak)
     mwi.b_goto_well.clicked.connect(lambda: stepper_well_positioning.goto_well(mwi.Well_Map[mwi.row_well_combo_box.currentIndex()][1][1], mwi.Well_Map[1][mwi.column_well_combo_box.currentIndex()][0]))
+
+    for Thread in Thread_List:
+        mwi.signals.windowClosing.connect(Thread.close)
 
     ##########################
     ## --- Thread start --- ##
@@ -653,7 +678,13 @@ if __name__ == '__main__':
 
     ret = app.exec_()
 
-    # stops the motors and disconnects from pseudo serial link /tmp/printer at exit
+    ## Make sure positioning is stopped
+    for Thread in Thread_List:
+        if Thread is not None:
+            Thread.wait_ms(1000)
+            print("waiting for Thread: " + str(Thread) + " to exit.")
+
+    ## stops the motors and disconnects from pseudo serial link /tmp/printer at exit
     steppers.PrintHAT_serial.disconnect()
     
     sys.exit(ret)

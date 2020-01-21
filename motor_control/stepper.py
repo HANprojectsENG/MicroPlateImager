@@ -8,8 +8,9 @@ import lib.imageProcessor as imageProcessor
 import lib.signal as signal
 import numpy as np
 import os
+import sys
 import cv2
-from PySide2.QtCore import QTimer, Signal, Slot, QEventLoop, QObject, QSettings
+from PySide2.QtCore import QTimer, Signal, Slot, QEventLoop, QObject, QSettings, QThread
 
 ## @brief StepperControl contains steppermotor specific information and creates G-code strings when called specific functions like turnRight().
 class StepperControl():
@@ -145,7 +146,7 @@ class StepperControl():
     ## @param column is the desired X-position
     ## @param row is the desired Y-position
     def moveToWell(self, column, row):
-        print("in functionStepperControl::gotoTargetWell")
+        print("in function StepperControl::gotoTargetWell")
         self.move_confirmed = False
         read = str
         confirmation = 'ok'
@@ -259,14 +260,19 @@ class StepperControl():
         self.PrintHAT_serial.executeGcode(gcode_string)
         self.signals.process_inactive.emit() ## Stops current batch process if running
         return
+    
 
 ## @brief StepperWellPositioning(QObject) takes care of the positioning of the wells under the camera.
-class StepperWellPositioning():
+## @todo remove the Well_Map variable if it is not in use
+## @todo function naming convention from i.e. reset_current_well to resetCurrentWell
+class StepperWellPositioning(QThread):
     signals = signal.signalClass()
+    process_activity = False
     stepper_control = None ## object StepperControl instance
     current_well_row = None
     current_well_column = None
-    Well_Map = None
+    ## @depricated Well_Map
+    Well_Map = None 
     Stopped = True
     GeneralEventLoop = None
     SnapshotEventLoop = None
@@ -281,6 +287,7 @@ class StepperWellPositioning():
     ## @param steppers is the StepperControl object representing the X- and Y-axis
     ## @param Well_data contains the target well specified by the user in the batch.ini file
     def __init__(self, steppers, Well_data):
+        super().__init__()
         self.stepper_control = steppers
         self.Well_Map = Well_data
         return
@@ -327,6 +334,7 @@ class StepperWellPositioning():
     ## @author Gert van Lagen (ported to new prototype which makes use of the Wrecklab PrintHAT)
     @Slot()
     def goto_well(self, row, column):
+        print("In goto_well function")
         self.signals.process_active.emit()
         self.Stopped = False
 
@@ -379,6 +387,32 @@ class StepperWellPositioning():
                 self.signals.first_move.emit()
 
                 ## Arrived at location, use machine vision to correct position if necessary.
+                if self.process_activity is True:
+                    if not self.goto_target():
+                        self.msg("Well positioning not succeeded.")
+                        self.set_current_well(None, None) ## Never reached reference point
+                        self.Stopped = True
+                        self.signals.process_inactive.emit()
+
+                        ## Manual confirmation needed. STM is to fast for the software to catch the last confirmation.
+                        self.stepper_control.move_confirmed = True 
+                        return False
+                    else:
+                        self.msg("Well positioning succeeded.")
+                        self.set_current_well(column, row)
+
+                        ## Manual confirmation needed. STM is to fast for the software to catch the last confirmation.
+                        self.stepper_control.move_confirmed = True 
+                else:
+                    print("Positioning process inactive, cannot call goto_target positioning controller function.")
+                    self.msg("Positioning process inactive, cannot call goto_target positioning controller function.")
+        
+        ## position known 
+        else:
+            if self.process_activity is True:
+                self.stepper_control.moveToWell(column, row)
+                self.set_current_well(column, row)
+                self.wait_ms(2000)
                 if not self.goto_target():
                     self.msg("Well positioning not succeeded.")
                     self.set_current_well(None, None) ## Never reached reference point
@@ -394,28 +428,9 @@ class StepperWellPositioning():
 
                     ## Manual confirmation needed. STM is to fast for the software to catch the last confirmation.
                     self.stepper_control.move_confirmed = True 
-        
-        ## position known 
-        else:
-            self.stepper_control.moveToWell(column, row)
-            self.set_current_well(column, row)
-            self.wait_ms(2000)
-            if not self.goto_target():
-                self.msg("Well positioning not succeeded.")
-                self.set_current_well(None, None) ## Never reached reference point
-                self.Stopped = True
-                self.signals.process_inactive.emit()
-
-                ## Manual confirmation needed. STM is to fast for the software to catch the last confirmation.
-                self.stepper_control.move_confirmed = True 
-                return False
             else:
-                self.msg("Well positioning succeeded.")
-                self.set_current_well(column, row)
-
-                ## Manual confirmation needed. STM is to fast for the software to catch the last confirmation.
-                self.stepper_control.move_confirmed = True 
-
+                print("Positioning process inactive, cannot call goto_target positioning controller function.")
+                self.msg("Positioning process inactive, cannot call goto_target positioning controller function.")
         ## Different row?
         if row != self.current_well_row or column != self.current_well_column:
             self.msg("moving from: (" + str(self.current_well_row) + " | " + str(self.current_well_column) + ") to: (" + str(row) + " | " + str(column) + ")")
@@ -431,7 +446,8 @@ class StepperWellPositioning():
         new_row = 0
 
         ## Do while the well is not aligned with the light source. 
-        while True:
+        while (self.process_activity is True) and (self.Stopped is False):
+            print("process_activity: " + str(self.process_activity))
             if (self.stepper_control.move_confirmed is True):
                 ## Wait for image to stabilize and request new snapshot
                 self.wait_ms(2500)
@@ -478,8 +494,10 @@ class StepperWellPositioning():
                     self.stepper_control.moveToWell(new_column, new_row)
                     self.set_current_well(new_column, new_row)
                 else:
-                    break
+                    return True
                 loops_ = loops_ + 1
+        print("Process_activity: " + str(self.process_activity))
+        print("Stopped: " + str(self.Stopped))
         return True
 
     ## @brief StepperWellPositioning()::snapshot_request(self) emits the snapshot_request signal
@@ -504,3 +522,26 @@ class StepperWellPositioning():
         self.SnapshotTaken = True
         if not (self.SnapshotEventLoop is None):
             self.SnapshotEventLoop.exit()
+        return
+    
+    ## @brief StepperWellPositioning()::setProcessInactive(self) disables the positionings process if the signal is emitted.
+    @Slot()
+    def setProcessInactive(self):
+        self.msg("Disabled positioning process activity")
+        self.process_activity = False
+        self.Stopped = True
+        return
+
+    ## @brief StepperWellPositioning()::setProcessActive(self) enables the positionings process if the signal is emitted.
+    @Slot()
+    def setProcessActive(self):
+        self.process_activity = True
+        self.Stopped = False
+        return
+
+    @Slot()
+    def close(self):
+        self.process_activity = False
+        self.Stopped = True
+        self.exit(0)
+        return

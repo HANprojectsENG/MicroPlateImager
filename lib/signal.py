@@ -14,7 +14,6 @@ class signalClass(QObject):
     resultBlobs = Signal(np.ndarray, list)
 
     ## Scanner
-    #imageUpdate = Signal()
     prvReady = Signal()
     capReady = Signal()
     previewUpdated = Signal()
@@ -37,6 +36,10 @@ class signalClass(QObject):
     stm_read_request = Signal()
     confirmation = Signal() ## emitted if stm message contains confirmation of Gcode execution
     first_move = Signal()
+
+    ## Batch Processor
+    batch_active = Signal()
+    batch_inactive = Signal()
 
     ## Main Window
     windowClosing = Signal()

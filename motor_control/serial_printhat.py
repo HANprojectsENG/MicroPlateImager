@@ -3,11 +3,12 @@
 ## @author Gert van Lagen
 
 import os
+import sys
 import serial
 import lib.signal as signal
 
 from PySide2.QtWidgets import *
-from PySide2.QtCore import QTimer, QEventLoop#, QMutex
+from PySide2.QtCore import QTimer, QEventLoop, QTimer
 
 ## @brief class GcodeSerial handles the /tmp/printer pseudoserial connection and writes incoming G-code. It also reads responses of the serial port.
 class GcodeSerial:

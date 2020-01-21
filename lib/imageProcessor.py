@@ -11,13 +11,14 @@ from PySide2.QtWidgets import *
 import numpy as np
 import math
 import sys
+import os
 import cv2
 import traceback
 import lib.signal as signal
 from lib.imageEnhancer import ImageEnhancer
 from lib.imageSegmenter import ImageSegmenter
 from lib.BlobDetector import BlobDetector
-from PySide2.QtCore import QThread, Slot
+from PySide2.QtCore import QThread, Slot, QEventLoop, QTimer
 
 
 class ImageProcessor(QThread):
@@ -118,7 +119,20 @@ class ImageProcessor(QThread):
 
     @Slot(bool)
     def setDetector(self, val):
-        self.gridDetection = val        
+        self.gridDetection = val  
+
+    ## @brief ImageProcessor::wait_ms(self, milliseconds) is a delay function.
+    ## @param milliseconds is the number of milliseconds to wait.
+    def wait_ms(self, milliseconds):
+        GeneralEventLoop = QEventLoop()
+        QTimer.singleShot(milliseconds, GeneralEventLoop.exit)
+        GeneralEventLoop.exec_()
+        return
+
+    @Slot()
+    def close(self):
+        self.exit(0)
+        return      
 
 ## @brief class WellPositionEvaluator evaluates the position of circles in the passed image relative to the target position.
 ## @author Robin Meekers
@@ -163,14 +177,13 @@ class WellPositionEvaluator(QThread):
             ## store the circle that has the largest radius
             best_radius = 0
             for (x, y, r) in circles:
-                print("target in evaluate: " + str(target[0]) + " | " + str(target[1]))
                 target_error = np.subtract((x,y), target)
                 if best_radius < r:
                     best_match = target_error
                     best_area = int(math.pi * r * r)
                     best_radius = r 
             error = (best_match, best_area, best_radius)
-            print("Found (hough): " + str(error))
+            #print("Found (hough): " + str(error))
             return error
         ## Couldnt find a circle using the hough circle method, the well is probably too far off target.
         ## Try detecting a well by using blobs and controur detection, and calculating their eccentricity.
@@ -211,5 +224,16 @@ class WellPositionEvaluator(QThread):
             return (error)
         else:
             return 0, 0, -1, -1
-            
 
+    ## @brief WellPositionEvaluator::wait_ms(self, milliseconds) is a delay function.
+    ## @param milliseconds is the number of milliseconds to wait.
+    def wait_ms(self, milliseconds):
+        GeneralEventLoop = QEventLoop()
+        QTimer.singleShot(milliseconds, GeneralEventLoop.exit)
+        GeneralEventLoop.exec_()
+        return
+
+    @Slot()
+    def close(self):
+        self.exit(0)
+        return
