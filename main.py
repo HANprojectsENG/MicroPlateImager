@@ -307,6 +307,18 @@ class MainWindow(QDialog):
 
         return self.logGroupBox
 
+    def setBatchWindow(self):
+        self.b_home_x.setVisible(False)
+        #x_label
+        #x_pos
+        #y_label
+        #y_pos
+        return
+
+    def setFullWindow(self):
+        self.b_home_x.setVisible(True)
+        return
+    
     ## @brief MainWindow::wellInitialisation(self) declares and defines the wellpositions in millimeters of the specified targets using the batch initialisation file.
     ## @author Robin Meekers
     ## @author Gert van lagen (ported to new well reader prototype software)
@@ -635,6 +647,9 @@ if __name__ == '__main__':
     mwi.b_gotoXY.clicked.connect(lambda: steppers.gotoXY(mwi.x_pos.text(), mwi.y_pos.text()))
     mwi.b_emergency_break.clicked.connect(steppers.emergencyBreak)
     mwi.b_goto_well.clicked.connect(lambda: stepper_well_positioning.goto_well(mwi.Well_Map[mwi.row_well_combo_box.currentIndex()][1][1], mwi.Well_Map[1][mwi.column_well_combo_box.currentIndex()][0]))
+
+    Batch.signals.batch_active.connect(mwi.setBatchWindow)
+    Batch.signals.batch_inactive.connect(mwi.setFullWindow)
 
     for Thread in Thread_List:
         mwi.signals.windowClosing.connect(Thread.close)
