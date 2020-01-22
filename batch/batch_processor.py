@@ -112,13 +112,14 @@ class BatchProcessor(QThread):
                     ##print("Target: " + str(self.Well_Map[column][1][1]) + " | " + str(self.Well_Map[1][row][0]))
                     if (self.well_positioner.goto_well(self.Well_Map[column][1][1], self.Well_Map[1][row][0])): ## if found well
                         self.snapshot_request(str(self.batch_id) + "/" + str(target[0][2]))
+                    while self.SnapshotTaken is False:
+                        self.wait_ms(50)
                     self.msg(str(target) + " finished.")
                     print(str(target) + " finished.")
             
-            
                 if self.end_time < current_milli_time():
                     self.msg("batch completed")
-                    print("batch completed, end_time | current time: " + str(self.end_time) + " | " + str(current_milli_time()))
+                    print("batch completed")
                     self.signals.batch_inactive.emit()
                     self.stopBatch()
                     return

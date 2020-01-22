@@ -447,25 +447,8 @@ class Scanner():
             cv2.imwrite(filename, self.capture)
         return
 
-    @Slot(str)
-    def snapshotRequestedCalibrator(self, message):
-        ## Set the info emitted by the calibrator.
-        self.calibration_msg = str(message)
-        ## Connect the capture ready signal to trigger the creation of a new frame.
-        self.captureUpdated.connect(self.snapshotCalibrator)
-
-    @Slot()
-    def snapshotCalibrator(self):
-        if not (self.capture is None):
-            if not os.path.exists("snapshots_calibration"):
-                os.mkdir("snapshots_calibration")
-            filename = ' snapshots_calibration/HTSD_Snapshots_' + str(current_milli_time()) + "_" + str(self.callibration_msg) + '.png'
-            print(filename)
-            cv2.imwrite(filename, self.capture)
-            # Disconnect the capture ready signal to only create snapshots when they are requested.
-            self.signals.captureUpdated.disconnect(self.snapshot_calibrator)
-            self.signals.signal_rdy_calibrator.emit()
-
+    ## @brief Scanner::snapshotRequestedPositioner(self, message) sets the positioner message and connects the preview signal to Scanner::snapshotPositioner
+    ## @param message is the positioner message
     @Slot(str)
     def snapshotRequestedPositioner(self, message):
         ## Set the info emitted by the calibrator
@@ -473,6 +456,7 @@ class Scanner():
         ## Connect the capture ready signal to trigger the creation of a new frame.
         self.signals.previewUpdated.connect(self.snapshotPositioner)
 
+    ## @brief Scanner::snapshotPositioner(self) signals the positioner ready signal if an capture image is stored.
     @Slot()
     def snapshotPositioner(self):
         if not (self.capture is None):
@@ -480,14 +464,16 @@ class Scanner():
             self.signals.previewUpdated.disconnect(self.snapshotPositioner)
             self.signals.signal_rdy_positioner.emit(self.preview)
 
+    ## @brief Scanner::snapshotRequestedBatchRun(self, message) sets the image part of the batch filename and connects the capture (high resolution capture image ready) signal to Scanner::snapshotBatchRun
+    ## @param message is the snapshot unique name which will be part of the imagefilename 
     @Slot(str)
     def snapshotRequestedBatchRun(self, message):
-        self.msg("Snapshot requested by batch with message: " + str(message))
         ## Set the info emitted by the calibrator.
         self.batchrun_msg = str(message)
         ## Connect the capture ready signal to trigger the creation of a new frame.
         self.signals.captureUpdated.connect(self.snapshotBatchRun)
 
+    ## @brief Scanner::snapshotBatchRun(self) writes the capture image to the desired directory (creates directory if not existing).
     @Slot()
     def snapshotBatchRun(self):
         if not (self.capture is None):
@@ -536,22 +522,6 @@ class Scanner():
             self.capture = image
             self.signals.captureUpdated.emit()
 
-    ## @brief Scanner::capRawUpdate(self, image=None) updates the image when a new one is available and emits a captureRawUpdated signal.
-    ## @param image is the new captured raw image.
-    @Slot(np.ndarray)
-    def capRawUpdate(self, image=None):
-        if not (image is None):
-            self.captureRaw = image
-            self.signals.captureRawUpdated.emit()
-
-    ## @brief Scanner::prvRawUpdate(self, image=None) updates the  raw preview image when a new one is availabe and emits the previewRawUpdated signal
-    ## @param image is the new raw image
-    @Slot(np.ndarray)
-    def prvRawUpdate(self, image=None):
-        print("in function Well_reader prvRawUpdate(self, image=None)")
-        if not (image is None):
-            self.previewRaw = image
-            self.signals.previewRawUpdated.emit()
 
     ## @brief Scanner::set_displaytarget(self, target_information) updates the current by opencv detected light source
     ## @param target_information is the information of the detected object

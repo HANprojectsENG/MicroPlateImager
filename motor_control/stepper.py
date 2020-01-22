@@ -7,6 +7,7 @@ import motor_control.serial_printhat as serial_printhat
 import lib.imageProcessor as imageProcessor
 import lib.signal as signal
 import numpy as np
+import math
 import os
 import sys
 import cv2
@@ -383,7 +384,7 @@ class StepperWellPositioning(QThread):
                 self.set_current_well(column, row)
                 
                 ## Too early evaluation by self.goto_target(), due to fast confirmation response of the PrintHAT STM, could result in a targetcircle placed on the light source.
-                self.wait_ms(2000)
+                self.wait_ms(4000)
                 self.signals.first_move.emit()
 
                 ## Arrived at location, use machine vision to correct position if necessary.
@@ -411,8 +412,31 @@ class StepperWellPositioning(QThread):
         else:
             if self.process_activity is True:
                 self.stepper_control.moveToWell(column, row)
+                
+                ## Wait for ms depending on moving distance
+                dist = math.sqrt(float(abs(float(column)-float(self.current_well_column)) * abs(float(column)-float(self.current_well_column))) + float(abs(float(row)-float(self.current_well_row)) * abs(float(row)-float(self.current_well_row))))
+                self.msg("Moving distance: " + str(dist))
+                if dist < 20:
+                    self.msg("Delay: 1000ms | dist: " + str(dist) + "mm")
+                    self.wait_ms(1000)
+                elif dist < 50:
+                    self.msg("Delay: 3000ms | dist: " + str(dist) + "mm")
+                    self.wait_ms(3000)
+                elif dist > 50 and dist < 70:
+                    self.msg("Delay: 5000ms | dist: " + str(dist) + "mm")
+                    self.wait_ms(5000)
+                elif dist > 70 and dist < 100:
+                    self.msg("Delay: 8000ms | dist: " + str(dist) + "mm")
+                    self.wait_ms(8000)
+                elif dist > 100:
+                    self.msg("Delay: 11000ms | dist: " + str(dist) + "mm")
+                    self.wait_ms(11000)
+                else:
+                    self.msg("Delay: 4000ms | Unknown dist: " + str(dist) + "mm")
+                    self.wait_ms(4000)
+                
                 self.set_current_well(column, row)
-                self.wait_ms(4000)
+
                 if not self.goto_target():
                     self.msg("Well positioning not succeeded.")
                     self.set_current_well(None, None) ## Never reached reference point
@@ -445,6 +469,7 @@ class StepperWellPositioning(QThread):
         WPE_Error = None
         new_column = 0
         new_row = 0
+        error_threshold = 50#120
 
         ## Do while the well is not aligned with the light source. 
         while True:
@@ -477,7 +502,7 @@ class StepperWellPositioning(QThread):
 
                     ## Some 
                     error_count = 0
-                    if (abs(WPE_Error[0][0]-30) < (self.image.shape[0] / 120) and abs(WPE_Error[0][1]+30) < (self.image.shape[0] / 120)) or (loops_ >20): ## No more adjustments to make or system is oscilating
+                    if (abs(WPE_Error[0][0]-30) < (self.image.shape[0] / error_threshold) and abs(WPE_Error[0][1]+30) < (self.image.shape[0] / error_threshold)) or (loops_ >20): ## No more adjustments to make or system is oscilating
                         if loops_ > 20:
                             self.msg("More than 20 correction loops, return False")
                             return False
@@ -491,7 +516,7 @@ class StepperWellPositioning(QThread):
                 
                 ## if the error values or column and row are larger or equal to 1/120th of the image height. 
                 ## @note Detection software returned incorrect error. Solved by the small offset (-30 for the column, +30 for the row) added to the error value. 
-                if abs(WPE_Error[0][0]-30) >= (self.image.shape[0] / 120) or abs(WPE_Error[0][1]+30) >= (self.image.shape[0] / 120):
+                if abs(WPE_Error[0][0]-30) >= (self.image.shape[0] / error_threshold) or abs(WPE_Error[0][1]+30) >= (self.image.shape[0] / error_threshold):
                     ## @note A small offset had to be added by the column and row controller variables as well
                     new_column = float(column)+float(new_column)-1
                     new_row = float(row) + float(new_row)+1
