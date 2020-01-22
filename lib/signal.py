@@ -25,7 +25,7 @@ class signalClass(QObject):
     signal_rdy_batchrun = Signal()    
 
     ## Well positioner
-    snapshot_requested = Signal(str)
+    snapshot_requested = Signal(str) ## also used by the batch process
     process_active = Signal()
     process_inactive = Signal()
     target_located = Signal(tuple)

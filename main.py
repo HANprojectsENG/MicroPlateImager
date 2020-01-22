@@ -482,20 +482,22 @@ class Scanner():
 
     @Slot(str)
     def snapshotRequestedBatchRun(self, message):
+        self.msg("Snapshot requested by batch with message: " + str(message))
         ## Set the info emitted by the calibrator.
         self.batchrun_msg = str(message)
         ## Connect the capture ready signal to trigger the creation of a new frame.
-        self.captureUpdated.connect(self.snapshot_BatchRun)
+        self.signals.captureUpdated.connect(self.snapshotBatchRun)
 
     @Slot()
     def snapshotBatchRun(self):
         if not (self.capture is None):
             self.signals.captureUpdated.disconnect(self.snapshotBatchRun)
-            if not os.path.exists("snapshot_run"):
-                os.mkdir("snapshot_run")
-            if not os.path.exists("snapshot_run/" + self.batchrun_msg):
-                os.makedirs("snapshot_run/" + self.batchrun_msg)
-            filename = ' snapshot_run/' + self.batchrun_msg + '/HTSD_Snapshot_' + str(current_milli_time()) + '.png'
+            if not os.path.exists("snapshot_batchrun"):
+                os.mkdir("snapshot_batchrun")
+            if not os.path.exists("snapshot_batchrun/" + self.batchrun_msg):
+                os.makedirs("snapshot_batchrun/" + self.batchrun_msg)
+            filename = 'snapshot_batchrun/' + self.batchrun_msg + '/HTSD_Snapshot_' + str(current_milli_time()) + '.png'
+            self.msg(str(filename))
             print(filename)
             cv2.imwrite(filename, self.capture)
             self.signals.signal_rdy_batchrun.emit()
@@ -622,6 +624,7 @@ if __name__ == '__main__':
     
     ## Connections of signals representing positioning and movement information
     stepper_well_positioning.signals.snapshot_requested.connect(mwi.Well_Scanner.snapshotRequestedPositioner)
+    Batch.signals.snapshot_requested.connect(mwi.Well_Scanner.snapshotRequestedBatchRun)
     stepper_well_positioning.signals.first_move.connect(steppers.PrintHAT_serial.setFirstMove)
     stepper_well_positioning.signals.target_located.connect(mwi.Well_Scanner.set_displaytarget)
     stepper_well_positioning.signals.well_located.connect(mwi.Well_Scanner.set_displaywell)
@@ -629,6 +632,7 @@ if __name__ == '__main__':
     stepper_well_positioning.signals.process_inactive.connect(stepper_well_positioning.setProcessInactive)
     steppers.signals.well_unknown.connect(stepper_well_positioning.reset_current_well)
     mwi.Well_Scanner.signals.signal_rdy_positioner.connect(stepper_well_positioning.snapshot_confirmed)
+    mwi.Well_Scanner.signals.signal_rdy_batchrun.connect(Batch.snapshot_confirmed)
 
     ## Connect image signals to designated functions
     Cam_Capturestream.signals.prvReady.connect(lambda: Image_Processor.update(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
@@ -648,6 +652,7 @@ if __name__ == '__main__':
     mwi.b_firmware_restart.clicked.connect(steppers.firmwareRestart)
     mwi.b_stm_read.clicked.connect(steppers.PrintHAT_serial.readPort)
     mwi.b_start_batch.clicked.connect(Batch.startBatch)
+    mwi.b_stop_batch.clicked.connect(stepper_well_positioning.setProcessInactive)
     mwi.b_stop_batch.clicked.connect(Batch.stopBatch)
     mwi.b_snapshot.clicked.connect(lambda: mwi.Well_Scanner.reader())
     mwi.b_doxygen.clicked.connect(mwi.doxygen)
@@ -677,7 +682,7 @@ if __name__ == '__main__':
     ########################
 
     ret = app.exec_()
-
+    
     ## Make sure positioning is stopped
     for Thread in Thread_List:
         if Thread is not None:

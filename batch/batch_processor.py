@@ -4,6 +4,7 @@
 import os
 import sys
 import time
+import numpy as np
 import lib.signal as signal
 import motor_control.stepper as stepper
 
@@ -14,6 +15,9 @@ current_milli_time = lambda: int(round(time.time() * 1000))
 ## @brief BatchProcessor() handles the batch process in which designated wells are photographed with the specified resolution, intervals and duration.
 class BatchProcessor(QThread):
     signals = signal.signalClass()
+    GeneralEventLoop = None
+    SnapshotEventLoop = None
+    SnapshotTaken = False
     is_active = False
     well_positioner = None
     Well_Map = None
@@ -82,55 +86,105 @@ class BatchProcessor(QThread):
         self.well_positioner.reset_current_well()
         self.signals.batch_active.emit()
         self.is_active = True
-        self.msg("Batch process initialized and started")
+        self.msg("Batch process initialized and started with:")
+        self.msg("Duration: " + str(self.duration) + "\nInterleave: " + str(self.interleave) + "\nStart_time: " + str(self.start_time) + "\nEnd_time: " + str(self.end_time))
         self.runBatch()
         return
 
     ## @brief BatchProcessor()::runBatch(self) runs the batch after it is started. 
+    ## @note the interleave is actually the interleave + processingtime of the "for target in self.Well_Targets:" loop
     ## @todo batch_(in)active signals connection
-    ## @todo time handling and conversion
+    ## @todo take snapshot
     def runBatch(self):
         while True:
-            if not self.is_active:
-                self.signals.batch_inactive.emit()
-                return
-
             for target in self.Well_Targets:
-                self.msg("Moving to: " + str(target))
-                
-                column = target[0][0]
-                row = target[0][1]
-                self.msg("Go to target column: " + str(self.Well_Map[target[0][0]][1][1]) + " and row: " + str(self.Well_Map[1][target[0][1]][0]))
-                self.well_positioner.goto_well(self.Well_Map[column][1][1], self.Well_Map[1][row][0])
-                ## Take snapshot            
-                self.msg("Target: " + str(target) + " finished.")
+                if not self.is_active:
+                    self.signals.batch_inactive.emit()
+                    self.msg("Batch stopped.")
+                    print("Batch stopped.")
+                    return
+
+                else:
+                    row = target[0][0]
+                    column = target[0][1]
+                    self.msg("Target: " + str(target[0][2]))
+                    print("Target: " + str(target[0][2]))
+                    ##print("Target: " + str(self.Well_Map[column][1][1]) + " | " + str(self.Well_Map[1][row][0]))
+                    if (self.well_positioner.goto_well(self.Well_Map[column][1][1], self.Well_Map[1][row][0])): ## if found well
+                        self.snapshot_request(str(self.batch_id) + "/" + str(target[0][2]))
+                    self.msg(str(target) + " finished.")
+                    print(str(target) + " finished.")
             
-            #if self.end_time > current_milli_time():
-            #    self.msg("batch completed")
-            #    self.signals.batch_inactive.emit()
-            #    return
-        
-            self.signals.batch_active.emit()
-            self.wait_ms(self.interleave*1000)
+            
+                if self.end_time < current_milli_time():
+                    self.msg("batch completed")
+                    print("batch completed, end_time | current time: " + str(self.end_time) + " | " + str(current_milli_time()))
+                    self.signals.batch_inactive.emit()
+                    self.stopBatch()
+                    return
+                else:
+                    self.msg("Remaining time " + str(self.end_time-current_milli_time()))
+                    print("Remaining time " + str(self.end_time-current_milli_time()))
+
+            ## Wait for the specified interval after all wells are photographed
             self.msg("Waiting for: " + str(self.interleave*1000) + " s")
+            print("Waiting for: " + str(self.interleave*1000) + " s")
+            self.wait_ms(self.interleave*1000)
+    
+        self.msg("Breaking out batch process")
+        print("Breaking out batch process")
         return
 
     ## @brief BatchProcessor()::wait_ms(self, milliseconds) is a delay function.
     ## @param milliseconds is the number of milliseconds to wait.
     def wait_ms(self, milliseconds):
-        GeneralEventLoop = QEventLoop()
-        QTimer.singleShot(milliseconds, GeneralEventLoop.exit)
-        GeneralEventLoop.exec_()
+        self.GeneralEventLoop = QEventLoop()
+        QTimer.singleShot(milliseconds, self.GeneralEventLoop.exit)
+        self.GeneralEventLoop.exec_()
+        return
+
+    ## @brief BatchProcessor()::snapshot_request(self, message) emits the self.signals.snapshot_requested signal.
+    ## @param message is the pathname of the desired snapshot
+    def snapshot_request(self, message):
+        self.msg("Requesting snapshot")
+        self.signals.snapshot_requested.emit(message)
+        self.snapshot_await()
+        return
+
+    ## @brief StepperWellPositioning()::snapshot_await(self) runs an eventloop while the new snapshot is not stored in self.image yet.
+    def snapshot_await(self):
+        self.SnapshotTaken = False
+        while self.is_active and not self.SnapshotTaken:
+            self.msg("Waiting for snapshot")
+            self.SnapshotEventLoop = QEventLoop()
+            QTimer.singleShot(10, self.SnapshotEventLoop.exit)
+            self.SnapshotEventLoop.exec_()
         return
 
     @Slot()
+    def snapshot_confirmed(self):
+        self.SnapshotTaken = True
+        if not (self.SnapshotEventLoop is None):
+            self.SnapshotEventLoop.exit()
+
+    ## @brief BatchProcessor()::stopBatch is a slot function which is called when the button stopBatch is pressed on the MainWindow GUI. 
+    ## It stops the batch process and resets the wait eventloop if running.
+    ## @todo connect batch_inactive to function that sets self.is_active to False like in the StepperWellPositioning class is done
+    @Slot()
     def stopBatch(self):
+        self.msg("Stopping Batch process")
+        print("Stopping Batch process")
         self.signals.batch_inactive.emit()
+        self.signals.process_inactive.emit() ## Used to stop positioning process of function StepperWellPositioning::goto_target
         self.is_active = False
+        if not (self.GeneralEventLoop is None):
+            self.GeneralEventLoop.exit()
+            self.msg("Exit BatchProcessor::GeneralEventloop")
         return
         
     @Slot()
     def close(self):
+        self.stopBatch()
         self.exit(0)
         return
               

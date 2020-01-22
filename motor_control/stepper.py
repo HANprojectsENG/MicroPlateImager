@@ -146,7 +146,7 @@ class StepperControl():
     ## @param column is the desired X-position
     ## @param row is the desired Y-position
     def moveToWell(self, column, row):
-        print("in function StepperControl::gotoTargetWell")
+        #print("in function StepperControl::moveToWell")
         self.move_confirmed = False
         read = str
         confirmation = 'ok'
@@ -412,7 +412,7 @@ class StepperWellPositioning(QThread):
             if self.process_activity is True:
                 self.stepper_control.moveToWell(column, row)
                 self.set_current_well(column, row)
-                self.wait_ms(2000)
+                self.wait_ms(4000)
                 if not self.goto_target():
                     self.msg("Well positioning not succeeded.")
                     self.set_current_well(None, None) ## Never reached reference point
@@ -428,6 +428,7 @@ class StepperWellPositioning(QThread):
 
                     ## Manual confirmation needed. STM is to fast for the software to catch the last confirmation.
                     self.stepper_control.move_confirmed = True 
+                    return True
             else:
                 print("Positioning process inactive, cannot call goto_target positioning controller function.")
                 self.msg("Positioning process inactive, cannot call goto_target positioning controller function.")
@@ -446,9 +447,12 @@ class StepperWellPositioning(QThread):
         new_row = 0
 
         ## Do while the well is not aligned with the light source. 
-        while (self.process_activity is True) and (self.Stopped is False):
-            print("process_activity: " + str(self.process_activity))
+        while True:
             if (self.stepper_control.move_confirmed is True):
+                if self.process_activity is False:
+                    self.msg("!Returning from alignment controller loop in StepperWellPositioning::goto_target")
+                    print("!Returning from alignment controller loop in StepperWellPositioning::goto_target")
+                    return False
                 ## Wait for image to stabilize and request new snapshot
                 self.wait_ms(2500)
                 self.snapshot_request()
@@ -473,7 +477,7 @@ class StepperWellPositioning(QThread):
 
                     ## Some 
                     error_count = 0
-                    if (abs(WPE_Error[0][0]) < (self.image.shape[0] / 120) and abs(WPE_Error[0][1]) < (self.image.shape[0] / 120)) or (loops_ >20): ## No more adjustments to make or system is oscilating
+                    if (abs(WPE_Error[0][0]-30) < (self.image.shape[0] / 120) and abs(WPE_Error[0][1]+30) < (self.image.shape[0] / 120)) or (loops_ >20): ## No more adjustments to make or system is oscilating
                         if loops_ > 20:
                             self.msg("More than 20 correction loops, return False")
                             return False
@@ -496,8 +500,10 @@ class StepperWellPositioning(QThread):
                 else:
                     return True
                 loops_ = loops_ + 1
-        print("Process_activity: " + str(self.process_activity))
-        print("Stopped: " + str(self.Stopped))
+            if self.process_activity is False:
+                self.msg("Returning from alignment controller loop in StepperWellPositioning::goto_target")
+                print("Returning from alignment controller loop in StepperWellPositioning::goto_target")
+                return False
         return True
 
     ## @brief StepperWellPositioning()::snapshot_request(self) emits the snapshot_request signal
@@ -528,8 +534,13 @@ class StepperWellPositioning(QThread):
     @Slot()
     def setProcessInactive(self):
         self.msg("Disabled positioning process activity")
+        print("Disabled positioning process activity")
         self.process_activity = False
         self.Stopped = True
+        if not (self.GeneralEventLoop is None):
+            self.GeneralEventLoop.exit()
+            self.msg("Exit StepperWellPositioning::GeneralEventloop")
+            print("Exit StepperWellPositioning::GeneralEventloop")
         return
 
     ## @brief StepperWellPositioning()::setProcessActive(self) enables the positionings process if the signal is emitted.
