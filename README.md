@@ -1,4 +1,5 @@
-## @brief README.md version 23th of January 2020
+README.md V23_01_2020
+
 1. Run system
     - Connect monitor, mouse, keyboard, (optionally ethernet), endstops, steppers X and Y, and finally the power sources (RPI and LED).
     - Run the program with the command "python3 main.py"
