@@ -869,9 +869,11 @@ RECURSIVE              = YES
 # run.
 
 EXCLUDE                = ../__pycache__ \
-                         ../picamera \
-                         ../snapshots
-			
+                         ../picamera/*.py \
+			 ../picamera/mmalobj.py \
+			 ../picamera/frames.py \
+			 ../picamera/color.py \
+                         ../snapshots/*.png
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded
@@ -887,7 +889,9 @@ EXCLUDE_SYMLINKS       = NO
 # Note that the wildcards are matched against the file with absolute path, so to
 # exclude all test directories for example use the pattern */test/*
 
-EXCLUDE_PATTERNS       = 
+EXCLUDE_PATTERNS       = */picamera/*
+EXCLUDE_PATTERNS      += */snapshots/*
+EXCLUDE_PATTERNS      += */snapshot_batchrun/*
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the

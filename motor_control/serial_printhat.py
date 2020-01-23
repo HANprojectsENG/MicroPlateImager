@@ -11,6 +11,7 @@ from PySide2.QtWidgets import *
 from PySide2.QtCore import QTimer, QEventLoop, QTimer
 
 ## @brief class GcodeSerial handles the /tmp/printer pseudoserial connection and writes incoming G-code. It also reads responses of the serial port.
+## @author Gert van Lagen
 class GcodeSerial:
     ## @param message is the class message signal used to display the result in the window log using its slot function.
     signals = signal.signalClass()
@@ -26,7 +27,6 @@ class GcodeSerial:
 
     ## @brief GcodeSerial::__init__ creates a serial instance and checks if no more than one instance is created.
     # Furthermore it restarts the klipper service in order to make sure this service is not exited due to unexpected crashes of the window.
-    # @todo Verify working of instance limiter
     def __init__(self):
         super().__init__()
         
@@ -86,7 +86,6 @@ class GcodeSerial:
     
     ## @brief Gcode_serial::executeGcode writes a bytearray containing a G-code to the serial port.
     # @param gcode_string is the string to be written to the serial port.
-    # @todo Check connection state at a G-code write.
     def executeGcode(self, gcode_string):
         if self.getConnectionState():
             try:
@@ -102,7 +101,6 @@ class GcodeSerial:
 
     ## @brief Gcode_serial::readPort(self) reads data from port while port is not empty with a timeout of x seconds (which is initialised in the Gcode_serial::__init__ function).
     # @return data is the read data from the port.
-    # @todo Make a signal triggered read action.
     def readPort(self):
         #self.msg("Please wait, reading data from STM...")
         self.wait_ms(1)
@@ -131,7 +129,6 @@ class GcodeSerial:
         return
 
     ## @brief Gcode_serial::disconnect stops the motors and the klipper service and then disconnects from pseudo serial port /tmp/printer.
-    ## @todo stop running eventloops 
     def disconnect(self):
         print("\nDEBUG: in function ser_comm::disconnect()")
         try:

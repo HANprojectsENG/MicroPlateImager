@@ -1,5 +1,6 @@
 ## @package batch_processor.py
 ## @brief the classes in batch_processor.py handle the batch process of the well plate reader
+## @author Gert van Lagen (snapshot handle functions token from @author Robin Meekers)
 
 import os
 import sys
@@ -13,7 +14,8 @@ from PySide2.QtCore import Slot, QEventLoop, QTimer, QThread
 current_milli_time = lambda: int(round(time.time() * 1000))
 
 ## @brief BatchProcessor() handles the batch process in which designated wells are photographed with the specified resolution, intervals and duration.
-class BatchProcessor():#QThread):
+## @author Gert van Lagen (snapshot handle functions token from @author Robin Meekers)
+class BatchProcessor():
     signals = signal.signalClass()
     GeneralEventLoop = None
     SnapshotEventLoop = None
@@ -30,8 +32,9 @@ class BatchProcessor():#QThread):
     end_time = 0
     
     ## @brief BatchProcessor()::__init__ sets the batch settings
-    ## @param well_pos is the well positioning class instance used to position the wells under the camera.
-    ## @param well_data is the list of target wells with their positions/column- rowindexes.
+    ## @param well_controller is the well positioning class instance used to position the wells under the camera.
+    ## @param well_map is the list of target wells with their positions in mm of both row and column.
+    ## @param well_targets is the list of the target wells with their column and row index positions and ID.
     ## @param ID is the batch ID.
     ## @param info is the batch information.
     ## @param dur is the batch duration.
@@ -80,9 +83,6 @@ class BatchProcessor():#QThread):
     ## @brief BatchProcessor()::startBatch(self) starts the batch process by setting the current (start)time and the endtime. 
     ## It disables the manual motor control and emits the batch_active signal
     ## @todo call updateBatchSettings function
-    ## @todo disable manual control buttons
-    ## @todo connect batch_active signal in main function
-    ## @todo batchrun snapshot directory
     @Slot()
     def startBatch(self):
         self.start_time = current_milli_time()
@@ -97,8 +97,6 @@ class BatchProcessor():#QThread):
 
     ## @brief BatchProcessor()::runBatch(self) runs the batch after it is started. 
     ## @note the interleave is actually the interleave + processingtime of the "for target in self.Well_Targets:" loop
-    ## @todo batch_(in)active signals connection
-    ## @todo take snapshot
     def runBatch(self):
         while True:
             print("BatchProcessor thread check: " + str(QThread.currentThread()))
@@ -119,8 +117,8 @@ class BatchProcessor():#QThread):
                     while self.SnapshotTaken is False:
                         if not self.is_active:
                             self.signals.batch_inactive.emit()
-                            self.msg("Batch stopped.")
-                            print("Batch stopped.")
+                            self.msg("Batch stopped, breaking out of SnapshotTaken is False while loop.")
+                            print("Batch stopped, breaking out of SnapshotTaken is False while loop.")
                             return
                         print("Waiting in snapshot loop")
                         self.wait_ms(50)
@@ -180,7 +178,6 @@ class BatchProcessor():#QThread):
 
     ## @brief BatchProcessor()::stopBatch is a slot function which is called when the button stopBatch is pressed on the MainWindow GUI. 
     ## It stops the batch process and resets the wait eventloop if running.
-    ## @todo connect batch_inactive to function that sets self.is_active to False like in the StepperWellPositioning class is done
     @Slot()
     def stopBatch(self):
         self.msg("Stopping Batch process")

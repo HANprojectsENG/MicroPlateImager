@@ -3,6 +3,7 @@ import numpy as np
 
 ## @brief signalClass(QObject) contains signals. 
 # @param QObject is inherited from, because Signal() may be used only when the class is inherited from QObject, this way the signal can be used by each class.
+## @author Gert van lagen
 class signalClass(QObject):
     ## @param mes is the signal used in all classes to emit messages which are then displayed in the log window by the MainWindow class
     mes = Signal(str) 

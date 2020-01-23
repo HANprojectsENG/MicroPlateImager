@@ -3,6 +3,7 @@ from PySide2.QtCore import *
 import time
 import lib.signal as signal
 
+## @author Jeroen Veen
 class Manipulator(ABC):
     """Documentation for a class.
  

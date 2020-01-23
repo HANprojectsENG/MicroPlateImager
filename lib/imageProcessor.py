@@ -20,7 +20,7 @@ from lib.imageSegmenter import ImageSegmenter
 from lib.BlobDetector import BlobDetector
 from PySide2.QtCore import QThread, Slot, QEventLoop, QTimer
 
-
+## @author Jeroen Veen
 class ImageProcessor(QThread):
     '''
     Worker thread

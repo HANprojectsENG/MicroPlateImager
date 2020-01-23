@@ -10,6 +10,7 @@ import time, datetime
 import os
 import sys
 
+## @author Jeroen Veen
 class PiYArray(PiArrayOutput):
     """
     Produces a 2-dimensional Y only array from a YUV capture.
@@ -31,6 +32,7 @@ class PiYArray(PiArrayOutput):
         self.array = a[:self.y_len].reshape((self.fheight, self.fwidth))
 
 ## PiVideoStream class streams camera images to a numpy array
+## @author Jeroen Veen
 class PiVideoStream(QThread):
     name = "PiVideoStream"
     signals = signal.signalClass()
@@ -149,6 +151,7 @@ class PiVideoStream(QThread):
         self.exit(0)
         return
 
+## @author Jeroen Veen
 class FPS:
 	def __init__(self):
 		# store the start time, end time, and total number of frames

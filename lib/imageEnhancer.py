@@ -17,6 +17,7 @@ import inspect
 import traceback
 from lib.manipulator import Manipulator
 
+## @author Jeroen Veen
 class ImageEnhancer(Manipulator):
     """Image enhancer
     Subsequently, convert to grayscale, rotate and crop the image, 

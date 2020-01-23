@@ -14,6 +14,7 @@ import cv2
 from PySide2.QtCore import QTimer, Signal, Slot, QEventLoop, QObject, QSettings, QThread
 
 ## @brief StepperControl contains steppermotor specific information and creates G-code strings when called specific functions like turnRight().
+## @author Gert van Lagen
 class StepperControl():
     signals = signal.signalClass()
     move_confirmed = False
@@ -264,16 +265,14 @@ class StepperControl():
     
 
 ## @brief StepperWellPositioning(QObject) takes care of the positioning of the wells under the camera.
-## @todo remove the Well_Map variable if it is not in use
-## @todo function naming convention from i.e. reset_current_well to resetCurrentWell
-class StepperWellPositioning():#QThread):
+## @author Gert van Lagen
+## @author Robin Meekers (StepperWellPositioning::goto_well, StepperWellPositioning::goto_target, StepperWellPositioning::snapshot*)
+class StepperWellPositioning():
     signals = signal.signalClass()
     process_activity = False
     stepper_control = None ## object StepperControl instance
     current_well_row = None
     current_well_column = None
-    ## @depricated Well_Map
-    Well_Map = None 
     Stopped = True
     GeneralEventLoop = None
     SnapshotEventLoop = None
@@ -288,14 +287,9 @@ class StepperWellPositioning():#QThread):
     ## @param steppers is the StepperControl object representing the X- and Y-axis
     ## @param Well_data contains the target well specified by the user in the batch.ini file
     def __init__(self, steppers, Well_data):
-        #super().__init__()
         self.stepper_control = steppers
         self.Well_Map = Well_data
         return
-
-    #def __del__(self):
-    #    None
-    #    self.wait()
 
     ## @brief StepperWellPositioning()::msg emits the message signal. This emit will be catched by the logging slot function in main.py.
     ## @param message is the string message to be emitted.
@@ -587,5 +581,4 @@ class StepperWellPositioning():#QThread):
     def close(self):
         self.process_activity = False
         self.Stopped = True
-        #self.exit(0)
         return

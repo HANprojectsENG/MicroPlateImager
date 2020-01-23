@@ -14,6 +14,7 @@ import traceback
 from lib.manipulator import Manipulator
 import matplotlib.pyplot as plt
 
+## @author Jeroen Veen
 class ImageSegmenter(Manipulator):
     """Image segmenter
         \param image

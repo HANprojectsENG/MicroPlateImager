@@ -1,6 +1,7 @@
 ## @package main.py
 ## @brief main.py instantiates a main window. It handles message signals for logging. It connects to the PrintHAT pseudo serial port (/tmp/printer). It connects (window widget and class instance) signals to their slots and finally it disconnects from the port at exit.
-
+## @author Gert van Lagen
+## @author Robin Meekers (MainWindow::WellInitialisation, MainWindow::getSec, Scanner::reader, Scanner::snapshot*, Scanner::*Update, Scanner::set_displaytarget, Scanner::set_displaywell)
 import os
 import sys
 import time
@@ -26,6 +27,7 @@ current_milli_time = lambda: int(round(time.time() * 1000))
 ## @brief MainWindow(QDialog) instantiates a main window. It consists of a manual control groupbox in which the user can control the steppers of the plate reader manually. Furthermore a groupbox with batch control widgets is created. A groupbox with log window provides runtime debug information. A groupbox with a camerastream widget shows the snapshots created by the well.
 ## @param QDialog is used as the window is a user interactive GUI.
 ## @author Gert van Lagen
+## @author Robin Meekers (MainWindow::wellInitialisation, MainWindow::getSec)
 class MainWindow(QDialog):
     signals = signal.signalClass() # message signal
     settings = None
@@ -321,6 +323,7 @@ class MainWindow(QDialog):
         self.row_well_combo_box.setVisible(False)
         self.column_label.setVisible(False)
         self.column_well_combo_box.setVisible(False)
+        self.b_goto_well.setVisible(False)
         self.b_turn_up.setVisible(False)
         self.b_turn_right.setVisible(False)
         self.b_turn_left.setVisible(False)
@@ -341,6 +344,7 @@ class MainWindow(QDialog):
         self.row_well_combo_box.setVisible(True)
         self.column_label.setVisible(True)
         self.column_well_combo_box.setVisible(True)
+        self.b_goto_well.setVisible(True)
         self.b_turn_up.setVisible(True)
         self.b_turn_right.setVisible(True)
         self.b_turn_left.setVisible(True)
@@ -429,6 +433,7 @@ class MainWindow(QDialog):
 
 ## @brief Scanner is the class which handles the image snapshot recording and processing and updates the video stream
 ## @author Robin Meekers
+## @author Gert van Lagen (Scanner::createVideoWindow)
 class Scanner():
     signals = signal.signalClass()
     preview = None ## @param preview contains the preview image
@@ -449,7 +454,6 @@ class Scanner():
 
     ## @brief MainWindow::createVideoGroupBox(self) creates the groupbox and the widgets in it which are used for displaying vido widgets.
     ## @return self.videoGroupBox. This the groupbox containing the snapshot visualisation widgets.
-    ## @todo commenting
     def createVideoWindow(self):
         self.videoGridLayout = QGridLayout()
         self.videoGroupBox = QGroupBox()
@@ -530,7 +534,6 @@ class Scanner():
 
     ## @brief Scanner::prvUpdate(self, image=None) updates the preview image on the QLabel widget of the MainWindow
     ## @param image is the new image to show
-    ## @todo check necessity  of raw update functions
     @Slot(np.ndarray)
     def prvUpdate(self, image=None):
         if not (image is None):
@@ -583,6 +586,7 @@ class Scanner():
 ## Furthermore the well positioning classes and batch processor class are instantiated.
 ## After that it connects the (window and message) signals to their slots and starts the threads.
 ## At exit, it takes care of correct shutdown of the motors and disconnection of the /tmp/printer port and stopping the klipper service.
+## @author Gert van Lagen
 ##################################################################################
 if __name__ == '__main__':
     
@@ -613,10 +617,10 @@ if __name__ == '__main__':
     ## @param Image_Processor processes the images recorded by the PiVideoStream instance 
     Image_Processor = ImageProcessor()
     
-    ## @brief
-    ## @todo commenting
+    ## @param Batch handles the batch process of the wells specified by the user in batch.ini
     Batch = batch_processor.BatchProcessor(stepper_well_positioning, mwi.Well_Map, mwi.Well_Targets, str(mwi.settings_batch.value("Run/ID")), str(mwi.settings_batch.value("Run/info")), mwi.getSec(str(mwi.settings_batch.value("Run/duration"))), mwi.getSec(str(mwi.settings_batch.value("Run/interleave"))))
 
+    ## @param Thread_List is a list with instances which have functionality what has to be closed at exit. Thread_List member close functions are called at the end of the main function.
     Thread_List = [Cam_Capturestream, Image_Processor, Batch, stepper_well_positioning]
 
     ###############################
