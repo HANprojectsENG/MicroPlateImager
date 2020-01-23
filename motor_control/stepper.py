@@ -147,7 +147,7 @@ class StepperControl():
     ## @param column is the desired X-position
     ## @param row is the desired Y-position
     def moveToWell(self, column, row):
-        #print("in function StepperControl::moveToWell")
+        print("StepperControl::moveToWell thread check: " + str(QThread.currentThread()))
         self.move_confirmed = False
         read = str
         confirmation = 'ok'
@@ -266,7 +266,7 @@ class StepperControl():
 ## @brief StepperWellPositioning(QObject) takes care of the positioning of the wells under the camera.
 ## @todo remove the Well_Map variable if it is not in use
 ## @todo function naming convention from i.e. reset_current_well to resetCurrentWell
-class StepperWellPositioning(QThread):
+class StepperWellPositioning():#QThread):
     signals = signal.signalClass()
     process_activity = False
     stepper_control = None ## object StepperControl instance
@@ -288,10 +288,14 @@ class StepperWellPositioning(QThread):
     ## @param steppers is the StepperControl object representing the X- and Y-axis
     ## @param Well_data contains the target well specified by the user in the batch.ini file
     def __init__(self, steppers, Well_data):
-        super().__init__()
+        #super().__init__()
         self.stepper_control = steppers
         self.Well_Map = Well_data
         return
+
+    #def __del__(self):
+    #    None
+    #    self.wait()
 
     ## @brief StepperWellPositioning()::msg emits the message signal. This emit will be catched by the logging slot function in main.py.
     ## @param message is the string message to be emitted.
@@ -566,6 +570,10 @@ class StepperWellPositioning(QThread):
             self.GeneralEventLoop.exit()
             self.msg("Exit StepperWellPositioning::GeneralEventloop")
             print("Exit StepperWellPositioning::GeneralEventloop")
+        if not (self.SnapshotEventLoop is None):
+            self.SnapshotEventLoop.exit()
+            self.msg("Exit BatchProcessor::SnapshotEventLoop")
+            print("Exit BatchProcessor::SnapshotEventLoop")
         return
 
     ## @brief StepperWellPositioning()::setProcessActive(self) enables the positionings process if the signal is emitted.
@@ -579,5 +587,5 @@ class StepperWellPositioning(QThread):
     def close(self):
         self.process_activity = False
         self.Stopped = True
-        self.exit(0)
+        #self.exit(0)
         return

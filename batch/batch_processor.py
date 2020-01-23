@@ -13,7 +13,7 @@ from PySide2.QtCore import Slot, QEventLoop, QTimer, QThread
 current_milli_time = lambda: int(round(time.time() * 1000))
 
 ## @brief BatchProcessor() handles the batch process in which designated wells are photographed with the specified resolution, intervals and duration.
-class BatchProcessor(QThread):
+class BatchProcessor():#QThread):
     signals = signal.signalClass()
     GeneralEventLoop = None
     SnapshotEventLoop = None
@@ -37,7 +37,7 @@ class BatchProcessor(QThread):
     ## @param dur is the batch duration.
     ## @param interl is the time between the photographing of each well.
     def __init__(self, well_controller, well_map, well_targets, ID, info, dur, interl):
-        super().__init__()
+        #super().__init__()
         self.is_active = False
         self.well_positioner = well_controller
         self.Well_Map = well_map
@@ -48,6 +48,10 @@ class BatchProcessor(QThread):
         self.interleave = interl
         return
 
+    #def __del__(self):
+    #    None
+    #    self.wait()
+        
     ## @brief BatchProcessor()::msg emits the message signal. This emit will be catched by the logging slot function in main.py.
     ## @param message is the string message to be emitted.
     @Slot(str)
@@ -86,8 +90,8 @@ class BatchProcessor(QThread):
         self.well_positioner.reset_current_well()
         self.signals.batch_active.emit()
         self.is_active = True
-        self.msg("Batch process initialized and started with:")
-        self.msg("Duration: " + str(self.duration) + "\nInterleave: " + str(self.interleave) + "\nStart_time: " + str(self.start_time) + "\nEnd_time: " + str(self.end_time))
+        self.msg("Batch process initialized and started with:\n\tDuration: " + str(self.duration) + "\n\tInterleave: " + str(self.interleave) + "\n\tStart_time: " + str(self.start_time) + "\n\tEnd_time: " + str(self.end_time))
+        print("Batch process initialized and started with:\n\tDuration: " + str(self.duration) + "\n\tInterleave: " + str(self.interleave) + "\n\tStart_time: " + str(self.start_time) + "\n\tEnd_time: " + str(self.end_time))
         self.runBatch()
         return
 
@@ -97,6 +101,7 @@ class BatchProcessor(QThread):
     ## @todo take snapshot
     def runBatch(self):
         while True:
+            print("BatchProcessor thread check: " + str(QThread.currentThread()))
             for target in self.Well_Targets:
                 if not self.is_active:
                     self.signals.batch_inactive.emit()
@@ -109,10 +114,15 @@ class BatchProcessor(QThread):
                     column = target[0][1]
                     self.msg("Target: " + str(target[0][2]))
                     print("Target: " + str(target[0][2]))
-                    ##print("Target: " + str(self.Well_Map[column][1][1]) + " | " + str(self.Well_Map[1][row][0]))
                     if (self.well_positioner.goto_well(self.Well_Map[column][1][1], self.Well_Map[1][row][0])): ## if found well
                         self.snapshot_request(str(self.batch_id) + "/" + str(target[0][2]))
                     while self.SnapshotTaken is False:
+                        if not self.is_active:
+                            self.signals.batch_inactive.emit()
+                            self.msg("Batch stopped.")
+                            print("Batch stopped.")
+                            return
+                        print("Waiting in snapshot loop")
                         self.wait_ms(50)
                     self.msg(str(target) + " finished.")
                     print(str(target) + " finished.")
@@ -178,14 +188,17 @@ class BatchProcessor(QThread):
         self.signals.batch_inactive.emit()
         self.signals.process_inactive.emit() ## Used to stop positioning process of function StepperWellPositioning::goto_target
         self.is_active = False
+        self.snapshot_confirmed()
         if not (self.GeneralEventLoop is None):
             self.GeneralEventLoop.exit()
             self.msg("Exit BatchProcessor::GeneralEventloop")
+        if not (self.SnapshotEventLoop is None):
+            self.SnapshotEventLoop.exit()
+            self.msg("Exit BatchProcessor::SnapshotEventLoop")
         return
         
     @Slot()
     def close(self):
         self.stopBatch()
-        self.exit(0)
         return
               

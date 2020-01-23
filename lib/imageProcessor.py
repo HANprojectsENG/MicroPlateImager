@@ -46,9 +46,9 @@ class ImageProcessor(QThread):
         self.gridDetection = False
        
         
-    def __del__(self):
-        None
-        self.wait()
+    #def __del__(self):
+    #    None
+    #    self.wait()
 
     ## @brief ImageProcessor::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
     ## @param message is the string message to be emitted.
@@ -131,6 +131,8 @@ class ImageProcessor(QThread):
 
     @Slot()
     def close(self):
+        print("ImageProcessor closing thread check: " + str(QThread.currentThread()))
+        self.stop()
         self.exit(0)
         return      
 
@@ -234,6 +236,14 @@ class WellPositionEvaluator(QThread):
         return
 
     @Slot()
+    def stop(self):
+        if self.isRunning():
+            self.msg('I: Stopping worker "{}"\n'.format(self.name))
+            self.quit()
+
+    @Slot()
     def close(self):
+        print("WellPositionEvaluator::close thread check: " + str(QThread.currentThread()))
+        self.stop()
         self.exit(0)
         return

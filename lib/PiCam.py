@@ -52,8 +52,8 @@ class PiVideoStream(QThread):
         self.startMillis = None
         print(self.name + ": camera opened.")
 
-    def __del__(self):
-        self.wait()
+    #def __del__(self):
+    #    self.wait()
 
     ## @brief PiVideoStream::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
     ## @param message is the string message to be emitted.
@@ -123,7 +123,7 @@ class PiVideoStream(QThread):
         self.fps.stop()
         print(self.name + ": approx. acquisition speed: {:.2f} fps".format(self.fps.fps()))        
         self.quit()
-        self.msg(self.name + ": closed.")
+        print(self.name + ": closed.")
         
     @Slot()
     def changeCameraSettings(self, resolution=(640,480), framerate=24, format="bgr", effect='none', use_video_port=False):
@@ -144,6 +144,8 @@ class PiVideoStream(QThread):
 
     @Slot()
     def close(self):
+        print("PiVideoStream closing thread check: " + str(QThread.currentThread()))
+        self.stop()
         self.exit(0)
         return
 

@@ -307,16 +307,44 @@ class MainWindow(QDialog):
 
         return self.logGroupBox
 
+    ## @brief MainWindow::setBatchWindow disables buttons which should not be used during the batch process. This function is called when the batch process is started.
+    @Slot()
     def setBatchWindow(self):
+        self.b_snapshot.setVisible(False)
         self.b_home_x.setVisible(False)
-        #x_label
-        #x_pos
-        #y_label
-        #y_pos
+        self.x_label.setVisible(False)
+        self.x_pos.setVisible(False)
+        self.y_label.setVisible(False)
+        self.y_pos.setVisible(False)
+        self.b_gotoXY.setVisible(False)
+        self.row_label.setVisible(False)
+        self.row_well_combo_box.setVisible(False)
+        self.column_label.setVisible(False)
+        self.column_well_combo_box.setVisible(False)
+        self.b_turn_up.setVisible(False)
+        self.b_turn_right.setVisible(False)
+        self.b_turn_left.setVisible(False)
+        self.b_turn_down.setVisible(False)
         return
 
+    ## @brief MainWindow::setBatchWindow enables all buttons. This function is called when the batch process is stopped.
+    @Slot()
     def setFullWindow(self):
+        self.b_snapshot.setVisible(True)
         self.b_home_x.setVisible(True)
+        self.x_label.setVisible(True)
+        self.x_pos.setVisible(True)
+        self.y_label.setVisible(True)
+        self.y_pos.setVisible(True)
+        self.b_gotoXY.setVisible(True)
+        self.row_label.setVisible(True)
+        self.row_well_combo_box.setVisible(True)
+        self.column_label.setVisible(True)
+        self.column_well_combo_box.setVisible(True)
+        self.b_turn_up.setVisible(True)
+        self.b_turn_right.setVisible(True)
+        self.b_turn_left.setVisible(True)
+        self.b_turn_down.setVisible(True)
         return
     
     ## @brief MainWindow::wellInitialisation(self) declares and defines the wellpositions in millimeters of the specified targets using the batch initialisation file.
@@ -589,7 +617,7 @@ if __name__ == '__main__':
     ## @todo commenting
     Batch = batch_processor.BatchProcessor(stepper_well_positioning, mwi.Well_Map, mwi.Well_Targets, str(mwi.settings_batch.value("Run/ID")), str(mwi.settings_batch.value("Run/info")), mwi.getSec(str(mwi.settings_batch.value("Run/duration"))), mwi.getSec(str(mwi.settings_batch.value("Run/interleave"))))
 
-    Thread_List = [stepper_well_positioning, Cam_Capturestream, Image_Processor, Batch]
+    Thread_List = [Cam_Capturestream, Image_Processor, Batch, stepper_well_positioning]
 
     ###############################
     ## --- Signal connection --- ##
@@ -668,6 +696,7 @@ if __name__ == '__main__':
 
     ret = app.exec_()
     
+    print("Main function thread: " + str(QThread.currentThread()))
     ## Make sure positioning is stopped
     for Thread in Thread_List:
         if Thread is not None:
