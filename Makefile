@@ -1,15 +1,7 @@
 ## @brief Makefile for doxygen documentation
 ## @author Gert van Lagen
 
-
 DOCS_DIR ="./Documentation"
-
-# run program with python3
-.PHONY: run
-run:
-	@echo "--Running software with python3 main.py--\n\n"
-	$(shell if [ -f "./main.py" ]; then python3 main.py; else echo "No main python file found"; fi)
-	@echo "--Finished running well plate reader system--"
 
 # create Doxygen documentation
 .PHONY: docs
