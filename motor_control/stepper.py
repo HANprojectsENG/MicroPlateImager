@@ -423,10 +423,10 @@ class StepperWellPositioning():
                 elif dist > 50 and dist < 70:
                     self.msg("Delay: 5000ms | dist: " + str(dist) + "mm")
                     self.wait_ms(5000)
-                elif dist > 70 and dist < 100:
+                elif dist > 70 and dist < 85:
                     self.msg("Delay: 8000ms | dist: " + str(dist) + "mm")
                     self.wait_ms(8000)
-                elif dist > 100:
+                elif dist > 85:
                     self.msg("Delay: 11000ms | dist: " + str(dist) + "mm")
                     self.wait_ms(11000)
                 else:
@@ -473,7 +473,7 @@ class StepperWellPositioning():
         while True:
             if (self.stepper_control.move_confirmed is True):
                 if self.process_activity is False:
-                    self.msg("!Returning from alignment controller loop in StepperWellPositioning::goto_target")
+                    #self.msg("!Returning from alignment controller loop in StepperWellPositioning::goto_target")
                     print("!Returning from alignment controller loop in StepperWellPositioning::goto_target")
                     return False
                 ## Wait for image to stabilize and request new snapshot
@@ -524,7 +524,7 @@ class StepperWellPositioning():
                     return True
                 loops_ = loops_ + 1
             if self.process_activity is False:
-                self.msg("Returning from alignment controller loop in StepperWellPositioning::goto_target")
+                #self.msg("Returning from alignment controller loop in StepperWellPositioning::goto_target")
                 print("Returning from alignment controller loop in StepperWellPositioning::goto_target")
                 return False
         return True
@@ -556,18 +556,18 @@ class StepperWellPositioning():
     ## @brief StepperWellPositioning()::setProcessInactive(self) disables the positionings process if the signal is emitted.
     @Slot()
     def setProcessInactive(self):
-        self.msg("Disabled positioning process activity")
+        #self.msg("Disabled positioning process activity")
         print("Disabled positioning process activity")
         self.process_activity = False
         self.Stopped = True
         if not (self.GeneralEventLoop is None):
             self.GeneralEventLoop.exit()
-            self.msg("Exit StepperWellPositioning::GeneralEventloop")
+            #self.msg("Exit StepperWellPositioning::GeneralEventloop")
             print("Exit StepperWellPositioning::GeneralEventloop")
         if not (self.SnapshotEventLoop is None):
             self.SnapshotEventLoop.exit()
-            self.msg("Exit BatchProcessor::SnapshotEventLoop")
-            print("Exit BatchProcessor::SnapshotEventLoop")
+            #self.msg("Exit StepperWellPositioning::SnapshotEventLoop")
+            print("Exit StepperWellPositioning::SnapshotEventLoop")
         return
 
     ## @brief StepperWellPositioning()::setProcessActive(self) enables the positionings process if the signal is emitted.

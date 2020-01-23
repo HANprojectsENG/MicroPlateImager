@@ -100,6 +100,8 @@ class BatchProcessor():
     def runBatch(self):
         while True:
             print("BatchProcessor thread check: " + str(QThread.currentThread()))
+            ## Run start time
+            run_start_time = current_milli_time()
             for target in self.Well_Targets:
                 if not self.is_active:
                     self.signals.batch_inactive.emit()
@@ -117,7 +119,7 @@ class BatchProcessor():
                     while self.SnapshotTaken is False:
                         if not self.is_active:
                             self.signals.batch_inactive.emit()
-                            self.msg("Batch stopped, breaking out of SnapshotTaken is False while loop.")
+                            #self.msg("Batch stopped, breaking out of SnapshotTaken is False while loop.")
                             print("Batch stopped, breaking out of SnapshotTaken is False while loop.")
                             return
                         print("Waiting in snapshot loop")
@@ -135,12 +137,20 @@ class BatchProcessor():
                     self.msg("Remaining time " + str(self.end_time-current_milli_time()))
                     print("Remaining time " + str(self.end_time-current_milli_time()))
 
-            ## Wait for the specified interval after all wells are photographed
-            self.msg("Waiting for: " + str(self.interleave*1000) + " s")
-            print("Waiting for: " + str(self.interleave*1000) + " s")
-            self.wait_ms(self.interleave*1000)
+            run_time = current_milli_time()-run_start_time
+            self.msg("Run time: " + str(run_time))
+            print("Run time: " + str(run_time) + "\nWaiting for " + str(self.interleave*1000-run_time) + " s")
+            if self.interleave*1000-run_time < 0:
+                self.msg("To short interleave, please increase the interleave to at least: " + str(run_time))
+                print("To short interleave, please increase the interleave to at least: " + str(run_time))
+            else:
+                ## Wait for the specified interleave minus the run_time of one run 
+                self.msg("Waiting for: " + str(self.interleave*1000-run_time) + " s")
+                print("Waiting for: " + str(self.interleave*1000-run_time) + " s")
+                self.wait_ms(self.interleave*1000-run_time)
+            
     
-        self.msg("Breaking out batch process")
+        #self.msg("Breaking out batch process")
         print("Breaking out batch process")
         return
 
@@ -180,7 +190,7 @@ class BatchProcessor():
     ## It stops the batch process and resets the wait eventloop if running.
     @Slot()
     def stopBatch(self):
-        self.msg("Stopping Batch process")
+        #self.msg("Stopping Batch process")
         print("Stopping Batch process")
         self.signals.batch_inactive.emit()
         self.signals.process_inactive.emit() ## Used to stop positioning process of function StepperWellPositioning::goto_target
@@ -188,10 +198,10 @@ class BatchProcessor():
         self.snapshot_confirmed()
         if not (self.GeneralEventLoop is None):
             self.GeneralEventLoop.exit()
-            self.msg("Exit BatchProcessor::GeneralEventloop")
+            print("Exit BatchProcessor::GeneralEventloop")
         if not (self.SnapshotEventLoop is None):
             self.SnapshotEventLoop.exit()
-            self.msg("Exit BatchProcessor::SnapshotEventLoop")
+            print("Exit BatchProcessor::SnapshotEventLoop")
         return
         
     @Slot()

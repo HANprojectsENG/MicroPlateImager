@@ -1,6 +1,6 @@
 1. Run system
     - Connect monitor, mouse, keyboard, (optionally ethernet), endstops, steppers X and Y, and finally the power sources (RPI and LED).
-    - Run the program with the command "run" or "python3 main.py"
+    - Run the program with the command "python3 main.py"
     - If the systems doesn't work, you can switch to branch Demo with "git checkout Demo" and run this system with the previously mentioned commands. 
       This Demo system doesn't contain the well positioning based on image processing software.
 
