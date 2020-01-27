@@ -1,10 +1,8 @@
 @startuml
 
-title Well plate reader - class diagram
+title Well plate reader - class diagram - drawed by Gert van Lagen
 
 'skinparam classAttributeIconSize 0
-
-'class MainWindow 
 
 '-------------------------------------------------------------main.py
 
@@ -16,42 +14,48 @@ package main.py #AAAAAA {
 		+ Well_Targets: numpy.array
 		+ __init__(self)
 		+ msg(self, message)
+		+ wait_ms(self, milliseconds)
 		+ createBatchGroupBox(self): self.batchGroupBox
 		+ createManualGroupBox(self): self.manualGroupBox
 		+ createLogWindow(self): self.logGroupBox
-		' + createVideoWindow(self): self.videoGroupBox
+		+ setBatchWindow(self)
+		+ setFullWindow(self)
 		+ wellInitialisation(self)
+		+ getSec(self, time_str)
 		+ openSettingsIniFile(self)
 		+ openBatchIniFile(self)
 		'
 		--Signals--
-		+ signals: signalCommunication
+		+ signals: signalClass
 		'
 		--Slots--
 		+ LogWindowInsert(self, message)
 		+ doxygen(self)
+		+ closeEvent(self, event)
 	}
 
 	class Scanner #FF55FF {
 		+ preview: numpy.array
 		+ capture: numpy.array
+		+ positioner_msg: str
+    	+ batchrun_msg: str
 		+ __init__(self)
 		+ createVideoWindow(self)
 		+ msg(self, message)
 		'
 		--Signals--
-		+ signals: signalCommunication
+		+ signals: signalClass
+		'
 		--Slots--
 		+ reader(self)
-		+ prvUpdate(self, image=None
-		+ capUpdate(self, image=None))
-	}
-}
-
-'-------------------------------------------------------------signal.py
-package signal.py #AAAAAA {
-	class signalCommunication #FF5555 {
-		+ sig: Signal
+		+ snapshotRequestedPositioner(self, message)
+		+ snapshotPositioner(self)
+		+ snapshotRequestedBatchrun(self, message)
+		+ snapshotBatchrun(self)
+		+ prvUpdate(self, image=None)
+		+ capUpdate(self, image=None)
+		+ set_displaytarget(self, target_information)
+		+ set_displaywell(self, target_information)
 	}
 }
 
@@ -71,16 +75,36 @@ package serial_printhat.py #AAAAAA {
 		+ disconnect(self)
 		'
 		--Signals--
-		+ message: signalCommunication
+		+ signals: signalClass
 	}
 }
 
 '-------------------------------------------------------------
-package stepper.py #AAAAAA {
+package batch_processor.py #AAAAAA {
 	class BatchProcessor #FF5555 {
-
+		+ well_positioner = StepperWellPositioning
+    	+ Well_Map = MainWindown.Well_Map
+    	+ Well_Targets = MainWindow.Well_Targets	
+		'
+		+ __init__(self, well_controller, well_map, well_targets, ID, info, dur, interl)
+		+ msg(self, message)
+		+ startBatch(self)
+		+ runBatch(self)
+		+ wait_ms(self, milliseconds)
+		+ snapshot_request(self, message)
+		+ snapshot_await(self)
+		'
+		--Signals--
+		+ signals: signalClass
+		'
+		--Slots--
+		+ snapshot_confirmed(self)
+		+ stopBatch(self)
+		+ close(self)
 	}
-	
+}
+'-------------------------------------------------------------
+package stepper.py #AAAAAA {
 	class StepperControl #55FF55 {
 		- self.position_x: float
 		- self.position_y: float
@@ -90,16 +114,15 @@ package stepper.py #AAAAAA {
 		+ getPositionY(self): self.position_y
 		+ setPositionX(self, x_pos)
 		+ setPositionY(self, y_pos)
-		+ <depricated> gotoX(self, x_pos)
-		+ <depricated> gotoY(self, y_pos)
 		'
 		--Signals--
-		+ message: signalCommunication
+		+ signals: signalClass
 		'
 		--Slots--
 		+ getPositionFromSTM(self)
 		+ homeXY(self)
 		+ gotoXY(self, x_pos, y_pos)
+		+ moveToWell(self, column, row):
 		+ turnUp(self)
 		+ turnLeft(self)
 		+ turnRight(self)
@@ -110,21 +133,28 @@ package stepper.py #AAAAAA {
 
 	class StepperWellPositioning #5555FF {
 		+ stepper_control: StepperControl
-		+ current_well_row: int
-    	+ current_well_column: int
+		+ current_well_row: float
+    	+ current_well_column: float
 		+ GeneralEventLoop: QEventLoop
-		+ __init__(self, steppers)
+		+ __init__(self, steppers, Well_data)
 		+ msg(self, message)
 		+ reset_current_well(self)
 		+ set_current_well(self, column, row)
 		+ get_current_well(self): self.current_well_column, self.current_well_row
 		+ wait_ms(self, milliseconds)
+		+ snapshot_request(self)
+		+ snapshot_await(self)
 		'
 		--Signals--
-		+ message: signalCommunication
+		+ signals: signalClass
 		'
 		--Slots--
 		+ goto_well(self, row, column)
+		+ goto_target(self)
+		+ snapshot_confirmed(self, snapshot)
+		+ setProcessInactive(self)
+		+ setProcessActive(self)
+		+ close(self)
 		
 	}	
 }
@@ -148,33 +178,44 @@ package PiCam.py #AAAAAA {
 		+ initCamera(self, resolution, monochrome, framerate, effect, use_video_port)
 		' 
 		--Signals--
-		+ signals: signal.signalClass()
+		+ signals: signalClass
 		' 
 		--Slots--
 		+ stop(self)
 		+ changeCameraSettings(self, resolution, framerate, format, effect, use_video_port)
+		+ close(self)
+	}
+
+	class FPS #FF5555 {
+		+ __init__()
+		+ start(self)
+		+ stop(self)
+		+ update(self)
+		+ elapsed(self)
+		+ fps(self)
 	}
 }
 
 package imageProcessor.py #AAAAAA {
+	class WellPositionEvaluator #ff5555 {
+		+ __init__(self)
+		+ evaluate(self)
+	}
+
 	class ImageProcessor #55ff55 {
 		+ __init__(self)
-		+ __del__(self)
 		+ msg(self, message)
+        - self.enhancer = ImageEnhancer()
+        - self.segmenter = ImageSegmenter()
 		' 
 		--Signals--
-		+ signals: signal.signalClass()
+		+ signals: signalClass
 		'
 		--Slots--
 		+ update(self, image=None)
 		+ run(self)
 		+ stop(self)
 		+ setDetector(self, val)
-}
-
-	class WellPositionEvaluator #ff5555 {
-		+ __init__(self)
-		+ evaluate(self)
 	}
 }
 package imageEnhancer.py #AAAAAA {
@@ -206,24 +247,100 @@ package imageSegmenter.py #AAAAAA {
 
 }
 
-'-------------------------------------------------------------Notes
-note "PreviewFrame and CaptureFrame upon result signal" as N1
-ImageProcessor .. N1
-N1 .. Scanner
+'-------------------------------------------------------------signal.py
+package signal.py #AAAAAA {
+	class signalClass #FF5555 {
+		--Signals--
+		mes = Signal(str) 
+		error = Signal(tuple)
+		result = Signal(np.ndarray)
+		finished = Signal()
+		resultBlobs = Signal(np.ndarray, list)
+		prvReady = Signal()
+		capReady = Signal()
+		previewUpdated = Signal()
+		captureUpdated = Signal()
+		previewRawUpdated = Signal()
+		captureRawUpdated = Signal()
+		signal_rdy_calibrator = Signal()
+		signal_rdy_positioner = Signal(np.ndarray)
+		signal_rdy_batchrun = Signal()    
+		snapshot_requested = Signal(str)
+		process_active = Signal()
+		process_inactive = Signal()
+		target_located = Signal(tuple)
+		well_located = Signal(tuple)
+		well_unknown = Signal()
+		stm_read_request = Signal()
+		first_move = Signal()
+		batch_active = Signal()
+		batch_inactive = Signal()
+		windowClosing = Signal()
+	}
+}
 
-note "Process picture on PrvReady signal" as N2
+
+'-------------------------------------------------------------Notes
+note "PreviewFrame and CaptureFrame\nupon result signal\nand snapshot_requested" as N1
+ImageProcessor .up. N1
+N1 .down. Scanner
+N1 .down. BatchProcessor
+
+note "Process picture on\nPrvReady or capReady signal" as N2
 PiVideoStream ..right. N2
 N2 .. ImageProcessor
 
+note "Used by many more classes" as N3
+N3 .up. signalClass
+
 '-------------------------------------------------------------arrows
-StepperControl -down-* " 1 " StepperWellPositioning
-signalCommunication -right-* " 1 " StepperControl
-signalCommunication -right-* " 1 " StepperWellPositioning
-signalCommunication -right-* " 1 " MainWindow
-Scanner -right-* " 1 " MainWindow
+'######################'
+'### BatchProcessor ###'
+'######################'
+'signalClass -right-* " 1 " BatchProcessor
+StepperWellPositioning -down-* " 1 " BatchProcessor
+
+'##############################'
+'### StepperWellPositioning ###'
+'##############################'
+'signalClass -right-* " 1 " StepperWellPositioning
+StepperControl -right-* " 1 " StepperWellPositioning
+WellPositionEvaluator -right-* " 1 " StepperWellPositioning
+
+'######################'
+'### ImageProcessor ###'
+'######################'
+'signalClass -right-* " 1 " imageProcessor
+ImageEnhancer -down-* ImageProcessor
+ImageSegmenter -down-* ImageProcessor
+
+'#####################'
+'### PiVideoStream ###'
+'#####################'
+'signalClass -right-* " 1 " PiVideoStream
 PiYArray -up-* " 2 " PiVideoStream
-GcodeSerial -down-* StepperControl
-ImageEnhancer -up-* ImageProcessor
-ImageSegmenter -right-* ImageProcessor
+FPS -up-* " 1 " PiVideoStream
+
+'###################'
+'### GcodeSerial ###'
+'###################'
+'signalClass -right-* " 1 " GcodeSerial
+
+'######################'
+'### StepperControl ###'
+'######################'
+'signalClass -right-* " 1 " StepperControl
+GcodeSerial -down-* " 1 " StepperControl
+
+'##################'
+'### MainWindow ###'
+'##################'
+signalClass -down-* " 1 " MainWindow
+Scanner -right-* " 1 " MainWindow
+
+'###############'
+'### Scanner ###'
+'###############'
+'signalClass -right-* " 1 " Scanner
 
 @enduml	

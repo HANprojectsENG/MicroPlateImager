@@ -1,0 +1,111 @@
+@startuml
+
+title Well plate reader - simple sequence diagram - drawed by Gert van Lagen
+
+
+'skinparam classAttributeIconSize 0
+
+Actor User
+Entity T_PiVideoStream
+Entity T_ImageProcessor
+Entity ImageEnhancer
+Entity ImageSegmenter
+Entity BatchProcessor
+Entity StepperWellPositioning
+Entity StepperControl
+Entity GcodeSerial
+Entity WellPositionEvaluator
+Entity Scanner
+Boundary "User Interface"
+
+==Image processing threads==
+T_PiVideoStream -[#black]> T_PiVideoStream: initCamera()
+'Preview image
+T_PiVideoStream -[#black]> T_PiVideoStream: PreviewFrame = array1
+T_PiVideoStream -[#orange]-> "User Interface": signals.prvReady.emit()
+"User Interface" -[#black]> T_ImageProcessor: update
+T_ImageProcessor -[#black]> T_ImageProcessor: start()
+T_ImageProcessor -[#black]> ImageEnhancer: start(image)
+ImageEnhancer -[#red]-> T_ImageProcessor: ready()
+T_ImageProcessor -[#black]> ImageSegmenter: start(image)
+ImageSegmenter -[#red]-> T_ImageProcessor: ready()
+T_ImageProcessor -[#orange]> "User Interface": result.emit()
+"User Interface" -[#black]> Scanner: prvUpdate()
+'Capture image
+T_PiVideoStream -[#black]> T_PiVideoStream: CaptureFrame = array2
+T_PiVideoStream -[#orange]-> "User Interface": signals.capReady.emit()
+"User Interface" -[#black]> T_ImageProcessor: update
+T_ImageProcessor -[#black]> T_ImageProcessor: start()
+T_ImageProcessor -[#black]> ImageEnhancer: start(image)
+ImageEnhancer -[#red]-> T_ImageProcessor: ready()
+T_ImageProcessor -[#black]> ImageSegmenter: start(image)
+ImageSegmenter -[#red]-> T_ImageProcessor: ready()
+T_ImageProcessor -[#orange]> "User Interface": result.emit()
+"User Interface" -[#black]> Scanner: capUpdate()
+
+==Batch run==
+User -[#green]> "User Interface": Start batch
+"User Interface" -[#red]> BatchProcessor: startBatch()
+
+BatchProcessor -[#black]> StepperWellPositioning: resetCurrentWell()
+BatchProcessor -[#orange]-> "User Interface": batch_active.emit()
+"User Interface" -[#black]> "User Interface": setBatchWindow()
+BatchProcessor -[#black]> BatchProcessor: Start time = current time
+BatchProcessor -[#black]> BatchProcessor: End time = start time + duration
+BatchProcessor -[#black]> BatchProcessor: isActive = True
+BatchProcessor -[#black]> BatchProcessor: runBatch()
+
+loop [ (Current Time - Start Time) < Batch Duration]
+    BatchProcessor -[#black]> BatchProcessor: Run Start Time = Current Time
+    loop [ For each target]
+        alt [ not isActive is True]
+            BatchProcessor -[#orange]-> "User Interface": batch_InActive.emit()
+        else [ isActive is True]
+            BatchProcessor -[#black]> StepperWellPositioning: goto_well()
+            activate BatchProcessor
+            alt [ if Current Well is None]
+                StepperWellPositioning -[#black]> StepperControl: homeXY()
+                activate StepperControl
+                StepperControl -[#red]-> StepperWellPositioning: ready()
+                deactivate StepperControl
+            end
+            StepperWellPositioning -[#black]> StepperControl: moveToWell(column, row)
+            StepperControl -[#red]-> StepperWellPositioning: ready()
+            StepperWellPositioning -[#black]> StepperWellPositioning: goto_target()
+            loop [ n=0; n<20; n++]
+                StepperWellPositioning -[#orange]-> Scanner: snapshot_requested.emit()
+                Scanner -[#black]-> StepperWellPositioning: snapshot_confirmed()
+                StepperWellPositioning -[#black]> WellPositionEvaluator: evaluate()
+                WellPositionEvaluator -[#black]> StepperWellPositioning: error = [column, row]
+                alt [ error > threshold]
+                    StepperWellPositioning -[#black]> StepperControl: moveToWell(column+error[row], row+error[row])
+                    activate StepperControl
+                    StepperControl -[#red]-> StepperWellPositioning: ready()
+                    deactivate StepperControl
+                else [ error < threshold]
+                    StepperWellPositioning -[#black]> StepperWellPositioning: setCurrentWell(column, row)
+                    StepperWellPositioning -[#red]> BatchProcessor: Break
+                end
+            end
+            deactivate BatchProcessor
+            BatchProcessor -[#orange]-> Scanner: snapshot_requested.emit()
+            Scanner -[#orange]-> BatchProcessor: snapshot_confirmed()
+            BatchProcessor -[#black]> BatchProcessor: Safe snapshot
+        end
+        alt [ Batch End Time < Current Time]
+            BatchProcessor -[#black]> BatchProcessor: stopBatch()
+            BatchProcessor -[#orange]-> "User Interface": batch_InActive.emit()
+        end
+    end
+    BatchProcessor -[#black]> BatchProcessor: Run Time = Current Time - Run Start Time
+    BatchProcessor -[#black]> BatchProcessor: wait (interleave)-(Run Time) milliseconds
+    User -[#green]> "User Interface": Stop batch
+    "User Interface" -[#red]> BatchProcessor: stopBatch()
+    BatchProcessor -[#orange]-> "User Interface": batch_inactive.emit()
+    "User Interface" -[#black]> "User Interface": setFullWindow()
+    "User Interface" -[#red]> BatchProcessor: Break
+end
+BatchProcessor -[#orange]-> "User Interface": batch_inactive.emit()
+"User Interface" -[#black]> "User Interface": setFullWindow()
+
+@enduml	

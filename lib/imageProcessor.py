@@ -45,11 +45,6 @@ class ImageProcessor(QThread):
         self.detector = BlobDetector(plot=False)
         self.gridDetection = False
        
-        
-    #def __del__(self):
-    #    None
-    #    self.wait()
-
     ## @brief ImageProcessor::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
     ## @param message is the string message to be emitted.
     def msg(self, message):

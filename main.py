@@ -438,11 +438,8 @@ class Scanner():
     signals = signal.signalClass()
     preview = None ## @param preview contains the preview image
     capture = None ## @param capture contains the captured image
-    captureRaw = None ## @param captureRaw contains the raw captured image
-    previewRaw = None ## @param previewRaw contains the raw preview image
     DisplayTarget = None
     DisplayWell = None
-    calibration_msg = str
     positioner_msg = str
     batchrun_msg = str
 
@@ -650,6 +647,7 @@ if __name__ == '__main__':
 
     ## Connect image signals to designated functions
     Cam_Capturestream.signals.prvReady.connect(lambda: Image_Processor.update(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
+    ## @todo Possibly duplicate above rule and connect the capture image too, because currently the preview image is captured in the batch run.
     Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.capUpdate(Image_Processor.image)) ## For the capture/snapshot images
     Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.prvUpdate(Image_Processor.image)) ## Image for the GUI preview (lower resolution)
 

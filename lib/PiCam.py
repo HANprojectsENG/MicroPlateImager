@@ -54,9 +54,6 @@ class PiVideoStream(QThread):
         self.startMillis = None
         print(self.name + ": camera opened.")
 
-    #def __del__(self):
-    #    self.wait()
-
     ## @brief PiVideoStream::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
     ## @param message is the string message to be emitted.
     def msg(self, message):

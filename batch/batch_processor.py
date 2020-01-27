@@ -50,10 +50,6 @@ class BatchProcessor():
         self.duration = dur
         self.interleave = interl
         return
-
-    #def __del__(self):
-    #    None
-    #    self.wait()
         
     ## @brief BatchProcessor()::msg emits the message signal. This emit will be catched by the logging slot function in main.py.
     ## @param message is the string message to be emitted.
@@ -65,6 +61,7 @@ class BatchProcessor():
 
     ## @brief BatchProcessor()::updateBatchSettings(self, well_data, ID, info, dur, interl) can be called to update the batch settings during runtime.
     ## @todo well_data update in MainWindow.
+    ## @depricated, BatchProcessor::updateBatchSettings not in use yet. Function might be usefull when updating the batch.ini via the GUI.
     ## @param well_data is the list of target wells with their positions/indexes.
     ## @param ID is the batch ID.
     ## @param info is the batch information.
@@ -185,6 +182,7 @@ class BatchProcessor():
         self.SnapshotTaken = True
         if not (self.SnapshotEventLoop is None):
             self.SnapshotEventLoop.exit()
+        return
 
     ## @brief BatchProcessor()::stopBatch is a slot function which is called when the button stopBatch is pressed on the MainWindow GUI. 
     ## It stops the batch process and resets the wait eventloop if running.
