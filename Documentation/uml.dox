@@ -2,5 +2,31 @@
 \page UML UML diagrams
 
 \section Classdiagram Class diagram
+<p>
+The class diagram shows the software structure and the relation between the classes.\n
+The class specific information can be found in the Doxygen documentation, and therefore in the comments in the software too.
+</p>
 ![Caption text](./IMG/Well_plate_reader_class_diagram_V3.png "Class Diagram")
+
+\section SequenceDiagram Sequence diagram
+<p>
+This sequence diagram shows how images are captured and processed (in section image processing threads)\n
+and how the batchprocess runs. 
+The batch process in short:
+1. The user starts the batch by entering batch parameters and target wells in batch.ini and hitting the start batch button on the user interface.
+2. The manual control buttons on the user interface vanish.
+3. Batchparamters are determined (starttime, stoptime, duration, interleave, targets).
+4. The batch is started by moving to the first well. This movement consists of ... steps:
+4.1. First a homing is performed if the current well position is unknown. 
+4.2. After homing confirmation (of the STM on the PrintHAT) the Gcode for moving to the target specific location is executed. 
+4.3. Now an error check based on hough transformation using openCV is done to correct for the error. 
+4.4. Once the error is corrected, a snapshot is requested and token from the camera stream (for the image captureing process, see section image processing threads).
+5. The move to the next well is performed.
+6. After all target wells are photographed (one run), the softwares waits for (interleave) - (time of 1 run), which is the remaining interleave/interval in milliseconds.
+7. Now it can start the next run.
+8. After the in the batch.ini specified duration is expired, the batch run stops.
+9. A button stop batch hit or a window close will result in a early stop of the batch process.
+10. All images are stored in the ../snapshot_batchrun directory.
+</p>
+![Caption text](./IMG/Well_plate_reader_complex_sequence_diagram_V1 "Sequence diagram")
 */
