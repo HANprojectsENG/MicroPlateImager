@@ -1,0 +1,5 @@
+<map id="lib.manipulator.Manipulator.stopTimer" name="lib.manipulator.Manipulator.stopTimer">
+<area shape="rect" id="node2" href="$a00098.html#ae279bd7688a26a8916a510b94f835d9b" title="BatchProcessor()::msg emits the message signal. " alt="" coords="284,5,544,32"/>
+<area shape="rect" id="node3" href="$a00110.html#a8824b021d1073ab7ae85961f9ebab10c" title="ImageProcessor::msg(self, message) emits the message signal. " alt="" coords="319,57,509,98"/>
+<area shape="rect" id="node4" href="$a00122.html#abdf76061e78e1425a6bdb916fea35d0c" title="Manipulator::msg(self, message) emits the message signal. " alt="" coords="299,123,529,149"/>
+</map>
