@@ -1,5 +1,0 @@
-<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node2" href="$a00110.html" title="lib.imageProcessor.Image\lProcessor" alt="" coords="151,5,340,47"/>
-<area shape="rect" id="node3" href="$a00114.html" title="class WellPositionEvaluator evaluates the position of circles in the passed image relative to the tar..." alt="" coords="131,71,360,112"/>
-<area shape="rect" id="node4" href="$a00130.html" title="PiVideoStream class streams camera images to a numpy array. " alt="" coords="153,137,337,163"/>
-</map>

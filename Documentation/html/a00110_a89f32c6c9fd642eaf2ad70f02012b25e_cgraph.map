@@ -1,4 +1,0 @@
-<map id="lib.imageProcessor.ImageProcessor.stop" name="lib.imageProcessor.ImageProcessor.stop">
-<area shape="rect" id="node2" href="$a00098.html#ae279bd7688a26a8916a510b94f835d9b" title="BatchProcessor()::msg emits the message signal. " alt="" coords="243,5,503,32"/>
-<area shape="rect" id="node3" href="$a00110.html#a8824b021d1073ab7ae85961f9ebab10c" title="ImageProcessor::msg(self, message) emits the message signal. " alt="" coords="278,57,467,98"/>
-</map>

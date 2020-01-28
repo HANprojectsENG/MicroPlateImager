@@ -1,4 +1,0 @@
-<map id="batch_processor.BatchProcessor.snapshot_request" name="batch_processor.BatchProcessor.snapshot_request">
-<area shape="rect" id="node2" href="$a00098.html#ae279bd7688a26a8916a510b94f835d9b" title="BatchProcessor()::msg emits the message signal. " alt="" coords="359,5,619,32"/>
-<area shape="rect" id="node3" href="$a00098.html#ae9aa75a978fb50f05926b8a894cabb04" title="StepperWellPositioning()::snapshot_await(self) runs an eventloop while the new snapshot is not stored..." alt="" coords="344,57,635,98"/>
-</map>

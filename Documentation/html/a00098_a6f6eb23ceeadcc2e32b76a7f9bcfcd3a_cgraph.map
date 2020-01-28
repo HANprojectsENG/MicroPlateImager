@@ -1,8 +1,0 @@
-<map id="batch_processor.BatchProcessor.runBatch" name="batch_processor.BatchProcessor.runBatch">
-<area shape="rect" id="node2" href="$a00098.html#ae279bd7688a26a8916a510b94f835d9b" title="BatchProcessor()::msg emits the message signal. " alt="" coords="661,5,921,32"/>
-<area shape="rect" id="node3" href="$a00098.html#a780285703fe3ff34ed61472b63c45630" title="BatchProcessor()::snapshot_request(self, message) emits the self.signals.snapshot_requested signal..." alt="" coords="307,57,597,98"/>
-<area shape="rect" id="node5" href="$a00098.html#afd08c42ebce79b37ad40357b2b39a645" title="BatchProcessor()::wait_ms(self, milliseconds) is a delay function. " alt="" coords="309,123,595,149"/>
-<area shape="rect" id="node6" href="$a00098.html#a1213b37b736bd3dadb28437b89e20905" title="BatchProcessor()::stopBatch is a slot function which is called when the button stopBatch is pressed o..." alt="" coords="322,174,582,215"/>
-<area shape="rect" id="node4" href="$a00098.html#ae9aa75a978fb50f05926b8a894cabb04" title="StepperWellPositioning()::snapshot_await(self) runs an eventloop while the new snapshot is not stored..." alt="" coords="645,57,936,98"/>
-<area shape="rect" id="node7" href="$a00098.html#a8390b6d29dd5341547e555f3c419e71e" title="batch_processor.BatchProcessor.snapshot\l_confirmed" alt="" coords="645,174,936,215"/>
-</map>

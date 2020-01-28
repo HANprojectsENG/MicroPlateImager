@@ -1,6 +1,0 @@
-<map id="lib.imageEnhancer.ImageEnhancer.start" name="lib.imageEnhancer.ImageEnhancer.start">
-<area shape="rect" id="node2" href="$a00122.html#a9bd5157da889a50089de7ff4e42bd26d" title="lib.manipulator.Manipulator.start\lTimer" alt="" coords="332,57,564,98"/>
-<area shape="rect" id="node3" href="$a00098.html#ae279bd7688a26a8916a510b94f835d9b" title="BatchProcessor()::msg emits the message signal. " alt="" coords="612,5,872,32"/>
-<area shape="rect" id="node4" href="$a00110.html#a8824b021d1073ab7ae85961f9ebab10c" title="ImageProcessor::msg(self, message) emits the message signal. " alt="" coords="647,57,837,98"/>
-<area shape="rect" id="node5" href="$a00122.html#abdf76061e78e1425a6bdb916fea35d0c" title="Manipulator::msg(self, message) emits the message signal. " alt="" coords="627,123,857,149"/>
-</map>

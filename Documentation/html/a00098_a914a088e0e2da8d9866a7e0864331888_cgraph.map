@@ -1,4 +1,0 @@
-<map id="batch_processor.BatchProcessor.close" name="batch_processor.BatchProcessor.close">
-<area shape="rect" id="node2" href="$a00098.html#a1213b37b736bd3dadb28437b89e20905" title="BatchProcessor()::stopBatch is a slot function which is called when the button stopBatch is pressed o..." alt="" coords="320,5,580,47"/>
-<area shape="rect" id="node3" href="$a00098.html#a8390b6d29dd5341547e555f3c419e71e" title="batch_processor.BatchProcessor.snapshot\l_confirmed" alt="" coords="628,5,919,47"/>
-</map>
