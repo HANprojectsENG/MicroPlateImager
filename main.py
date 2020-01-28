@@ -314,6 +314,7 @@ class MainWindow(QDialog):
     def setBatchWindow(self):
         self.b_snapshot.setVisible(False)
         self.b_home_x.setVisible(False)
+        self.b_get_pos.setVisible(False)
         self.x_label.setVisible(False)
         self.x_pos.setVisible(False)
         self.y_label.setVisible(False)
@@ -335,6 +336,7 @@ class MainWindow(QDialog):
     def setFullWindow(self):
         self.b_snapshot.setVisible(True)
         self.b_home_x.setVisible(True)
+        self.b_get_pos.setVisible(True)
         self.x_label.setVisible(True)
         self.x_pos.setVisible(True)
         self.y_label.setVisible(True)

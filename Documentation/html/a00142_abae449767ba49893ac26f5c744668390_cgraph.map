@@ -1,0 +1,7 @@
+<map id="main.MainWindow.doxygen" name="main.MainWindow.doxygen">
+<area shape="rect" id="node2" href="$a00098.html#ae279bd7688a26a8916a510b94f835d9b" title="BatchProcessor()::msg emits the message signal. " alt="" coords="253,5,513,32"/>
+<area shape="rect" id="node3" href="$a00110.html#a8824b021d1073ab7ae85961f9ebab10c" title="ImageProcessor::msg(self, message) emits the message signal. " alt="" coords="289,57,478,98"/>
+<area shape="rect" id="node4" href="$a00122.html#abdf76061e78e1425a6bdb916fea35d0c" title="Manipulator::msg(self, message) emits the message signal. " alt="" coords="268,123,499,149"/>
+<area shape="rect" id="node5" href="$a00130.html#a0c13c8b87b8bce9804cd4f3cec6932dd" title="PiVideoStream::msg(self, message) emits the message signal. " alt="" coords="275,173,491,200"/>
+<area shape="rect" id="node6" href="$a00142.html#a4db49242c58dc387dcc5a7eeb4a7c6f5" title="Mainwindow(QDialog)::msg(self, message) emits the message signal. " alt="" coords="297,224,469,251"/>
+</map>

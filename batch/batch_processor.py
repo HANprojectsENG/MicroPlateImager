@@ -132,7 +132,7 @@ class BatchProcessor():
                     return
                 else:
                     self.msg("Remaining time " + str(self.end_time-current_milli_time()))
-                    print("Remaining time " + str(self.end_time-current_milli_time()))
+                    print("Remaining time " + str(self.end_time-current_milli_time()) + " ms")
 
             run_time = current_milli_time()-run_start_time
             self.msg("Run time: " + str(run_time))
@@ -171,7 +171,7 @@ class BatchProcessor():
     def snapshot_await(self):
         self.SnapshotTaken = False
         while self.is_active and not self.SnapshotTaken:
-            self.msg("Waiting for snapshot")
+            #self.msg("Waiting for snapshot")
             self.SnapshotEventLoop = QEventLoop()
             QTimer.singleShot(10, self.SnapshotEventLoop.exit)
             self.SnapshotEventLoop.exec_()

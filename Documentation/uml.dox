@@ -28,5 +28,5 @@ The batch process in short:
 9. A button stop batch hit or a window close will result in a early stop of the batch process.
 10. All images are stored in the ../snapshot_batchrun directory.
 </p>
-![Caption text](./IMG/Well_plate_reader_complex_sequence_diagram_V1 "Sequence diagram")
+![Caption text](./IMG/Well_plate_reader_complex_sequence_diagram_V1.png "Sequence diagram")
 */
