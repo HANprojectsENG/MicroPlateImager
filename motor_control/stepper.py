@@ -467,7 +467,7 @@ class StepperWellPositioning():
         WPE_Error = None
         new_column = 0
         new_row = 0
-        error_threshold = 50#120
+        error_threshold = 100#50#120
 
         ## Do while the well is not aligned with the light source. 
         while True:
@@ -477,7 +477,7 @@ class StepperWellPositioning():
                     print("!Returning from alignment controller loop in StepperWellPositioning::goto_target")
                     return False
                 ## Wait for image to stabilize and request new snapshot
-                self.wait_ms(2500)
+                self.wait_ms(2000)
                 self.snapshot_request()
                 
                 ## Wait for snapshot to be stored in self.image
@@ -485,6 +485,7 @@ class StepperWellPositioning():
 
                 ## Evaluate current wellposition relative to the light source.
                 WPE_Error = self.WPE.evaluate(self.image, self.WPE_target)
+                self.msg("WPE target at (" + str(self.WPE_target[0]) + " | " + str(self.WPE_target[1]) + ")")
 
                 ## Area error, surface smaller or equal to 0
                 if WPE_Error[1] <= 0:
@@ -498,31 +499,36 @@ class StepperWellPositioning():
                     self.msg("Well found at (" + str(WPE_Error[0][0]) + " | " + str(WPE_Error[0][1]) + ")")
                     self.signals.well_located.emit((self.WPE_target[0]+WPE_Error[0][0], self.WPE_target[1]+WPE_Error[0][1], WPE_Error[2]))
 
-                    ## Some 
-                    error_count = 0
-                    if (abs(WPE_Error[0][0]-30) < (self.image.shape[0] / error_threshold) and abs(WPE_Error[0][1]+30) < (self.image.shape[0] / error_threshold)) or (loops_ >20): ## No more adjustments to make or system is oscilating
-                        if loops_ > 20:
-                            self.msg("More than 20 correction loops, return False")
-                            return False
-                        self.msg("Returning from positioner controller, loops: " + str(loops_))
-                        return True
+#                     ## Some 
+#                     error_count = 0
+#                     if (abs(WPE_Error[0][0]-30) < (self.image.shape[0] / error_threshold) and abs(WPE_Error[0][1]+30) < (self.image.shape[0] / error_threshold)) or (loops_ >20): ## No more adjustments to make or system is oscilating
+#                         if loops_ > 20:
+#                             self.msg("More than 20 correction loops, return False")
+#                             return False
+#                         self.msg("Returning from positioner controller, loops: " + str(loops_))
+#                         return True
 
                 ## Define controller variables for column and row | x and y.
-                new_column = float(WPE_Error[0][0]) / float(30.0)
-                new_row = float(WPE_Error[0][1])/float(30.0)
+                # Don't know resolution [pxls/mm] so just guess a step
+                new_column = float(WPE_Error[0][0]) / 50.0
+                new_row = float(WPE_Error[0][1]) / 50.0
                 column, row = self.get_current_well()
                 
                 ## if the error values or column and row are larger or equal to 1/120th of the image height. 
                 ## @note Detection software returned incorrect error. Solved by the small offset (-30 for the column, +30 for the row) added to the error value. 
-                if abs(WPE_Error[0][0]-30) >= (self.image.shape[0] / error_threshold) or abs(WPE_Error[0][1]+30) >= (self.image.shape[0] / error_threshold):
+#                 if abs(WPE_Error[0][0]-30) >= (self.image.shape[0] / error_threshold) or abs(WPE_Error[0][1]+30) >= (self.image.shape[0] / error_threshold):
+                if abs(WPE_Error[0][0]) >= (self.image.shape[1] / error_threshold) or abs(WPE_Error[0][1]) >= (self.image.shape[0] / error_threshold):
                     ## @note A small offset had to be added by the column and row controller variables as well
-                    new_column = float(column)+float(new_column)-1
-                    new_row = float(row) + float(new_row)+1
+                    new_column += column # float(column)-float(new_column)
+                    new_row += row # float(row) - float(new_row)
                     self.stepper_control.moveToWell(new_column, new_row)
                     self.set_current_well(new_column, new_row)
                 else:
                     return True
-                loops_ = loops_ + 1
+                loops_ += 1
+                if loops_ > 20:
+                    self.msg("More than 20 correction loops, return False")
+                    return False
             if self.process_activity is False:
                 #self.msg("Returning from alignment controller loop in StepperWellPositioning::goto_target")
                 print("Returning from alignment controller loop in StepperWellPositioning::goto_target")
@@ -546,7 +552,7 @@ class StepperWellPositioning():
     @Slot(np.ndarray)
     def snapshot_confirmed(self, snapshot):
         self.image = snapshot
-        self.WPE_target = (int(self.image.shape[1] / 2), int(self.image.shape[0] / 2))
+#         self.WPE_target = (int(self.image.shape[1] / 2), int(self.image.shape[0] / 2))
         self.image_area = int((self.image.shape[0]*self.image.shape[1]))
         self.SnapshotTaken = True
         if not (self.SnapshotEventLoop is None):
