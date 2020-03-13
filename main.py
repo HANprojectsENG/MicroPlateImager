@@ -514,18 +514,21 @@ class Scanner():
         ## Set the info emitted by the calibrator.
         self.batchrun_msg = str(message)
         ## Connect the capture ready signal to trigger the creation of a new frame.
-        self.signals.captureUpdated.connect(self.snapshotBatchRun)
+        self.signals.captureUpdated.connect(self.snapshotBatchRun)#             if not os.path.exists("snapshot_batchrun"):
+#                 os.mkdir("snapshot_batchrun")
 
     ## @brief Scanner::snapshotBatchRun(self) writes the capture image to the desired directory (creates directory if not existing).
     @Slot()
     def snapshotBatchRun(self):
         if not (self.capture is None):
             self.signals.captureUpdated.disconnect(self.snapshotBatchRun)
-            if not os.path.exists("snapshot_batchrun"):
-                os.mkdir("snapshot_batchrun")
-            if not os.path.exists("snapshot_batchrun/" + self.batchrun_msg):
-                os.makedirs("snapshot_batchrun/" + self.batchrun_msg)
-            filename = 'snapshot_batchrun/' + self.batchrun_msg + '/HTSD_Snapshot_' + str(current_milli_time()) + '.png'
+#             if not os.path.exists("snapshot_batchrun"):
+#                 os.mkdir("snapshot_batchrun")
+            file_path = str(mwi.settings_batch.value("Run/path")) + '/' + self.batchrun_msg
+            
+            if not os.path.exists(file_path):
+                os.makedirs(file_path)
+            filename = file_path + '/Snapshot_' + str(current_milli_time()) + '.png'
             self.msg(str(filename))
             print(filename)
             cv2.imwrite(filename, self.capture)
@@ -617,7 +620,12 @@ if __name__ == '__main__':
     Image_Processor = ImageProcessor()
     
     ## @param Batch handles the batch process of the wells specified by the user in batch.ini
-    Batch = batch_processor.BatchProcessor(stepper_well_positioning, mwi.Well_Map, mwi.Well_Targets, str(mwi.settings_batch.value("Run/ID")), str(mwi.settings_batch.value("Run/info")), mwi.getSec(str(mwi.settings_batch.value("Run/duration"))), mwi.getSec(str(mwi.settings_batch.value("Run/interleave"))))
+    Batch = batch_processor.BatchProcessor(stepper_well_positioning,
+                                           mwi.Well_Map, mwi.Well_Targets,
+                                           str(mwi.settings_batch.value("Run/ID")),
+                                           str(mwi.settings_batch.value("Run/info")),
+                                           mwi.getSec(str(mwi.settings_batch.value("Run/duration"))),
+                                           mwi.getSec(str(mwi.settings_batch.value("Run/interleave"))))
 
     ## @param Thread_List is a list with instances which have functionality what has to be closed at exit. Thread_List member close functions are called at the end of the main function.
     Thread_List = [Cam_Capturestream, Image_Processor, Batch, stepper_well_positioning]
