@@ -514,16 +514,13 @@ class Scanner():
         ## Set the info emitted by the calibrator.
         self.batchrun_msg = str(message)
         ## Connect the capture ready signal to trigger the creation of a new frame.
-        self.signals.captureUpdated.connect(self.snapshotBatchRun)#             if not os.path.exists("snapshot_batchrun"):
-#                 os.mkdir("snapshot_batchrun")
+        self.signals.captureUpdated.connect(self.snapshotBatchRun)
 
     ## @brief Scanner::snapshotBatchRun(self) writes the capture image to the desired directory (creates directory if not existing).
     @Slot()
     def snapshotBatchRun(self):
         if not (self.capture is None):
             self.signals.captureUpdated.disconnect(self.snapshotBatchRun)
-#             if not os.path.exists("snapshot_batchrun"):
-#                 os.mkdir("snapshot_batchrun")
             file_path = str(mwi.settings_batch.value("Run/path")) + '/' + self.batchrun_msg
             
             if not os.path.exists(file_path):
@@ -614,7 +611,12 @@ if __name__ == '__main__':
     stepper_well_positioning = stepper.StepperWellPositioning(steppers, mwi.Well_Map)
 
     ## @param Cam_Capturestream records images from the pi camera
-    Cam_Capturestream = PiVideoStream(resolution=(int(mwi.settings.value("Camera/width")), int(mwi.settings.value("Camera/height"))), monochrome=True, framerate=int(mwi.settings.value("Camera/framerate")), effect='blur', use_video_port=bool(mwi.settings.value("Camera/use_video_port")))
+    Cam_Capturestream = PiVideoStream(resolution=(int(mwi.settings.value("Camera/width")),
+                                                  int(mwi.settings.value("Camera/height"))),
+                                      monochrome=True,
+                                      framerate=int(mwi.settings.value("Camera/framerate")),
+                                      effect='blur',
+                                      use_video_port=bool(mwi.settings.value("Camera/use_video_port")))
     
     ## @param Image_Processor processes the images recorded by the PiVideoStream instance 
     Image_Processor = ImageProcessor()
@@ -656,9 +658,11 @@ if __name__ == '__main__':
     mwi.Well_Scanner.signals.signal_rdy_batchrun.connect(Batch.snapshot_confirmed)
 
     ## Connect image signals to designated functions
-    Cam_Capturestream.signals.prvReady.connect(lambda: Image_Processor.update(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
+#     Cam_Capturestream.sig nals.prvReady.connect(lambda: Image_Processor.update(Cam_Capturestream.PreviewFrame), type=Qt.BlockingQueuedConnection)
     ## @todo Possibly duplicate above rule and connect the capture image too, because currently the preview image is captured in the batch run.
-    Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.capUpdate(Image_Processor.image)) ## For the capture/snapshot images
+    Cam_Capturestream.signals.capReady.connect(lambda: Image_Processor.update(Cam_Capturestream.CaptureFrame), type=Qt.BlockingQueuedConnection)
+    Cam_Capturestream.signals.capReady.connect(lambda: mwi.Well_Scanner.capUpdate(Cam_Capturestream.CaptureFrame)) ## For the capture/snapshot images
+#     Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.capUpdate(Image_Processor.image)) ## For the capture/snapshot images
     Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.prvUpdate(Image_Processor.image)) ## Image for the GUI preview (lower resolution)
 
     ## Class message signals

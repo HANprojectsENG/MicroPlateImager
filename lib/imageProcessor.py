@@ -82,19 +82,22 @@ class ImageProcessor(QThread):
            
             # Retrieve args/kwargs here; and fire processing using them
             try:
-                # Enhance image
-                self.image = self.enhancer.start(self.image)
+                result = None
+                self.image = cv2.resize(self.image, (640,480))
                 
-                # Segment image according to grid 
-                if self.gridDetection:
-                    self.image = self.segmenter.start(self.image)
-                    ROIs = self.segmenter.ROIs
-                else:
-                    ROIs = [[int(self.image.shape[1]/4), int(self.image.shape[0]/4),
-                             int(self.image.shape[1]/2), int(self.image.shape[0]/2)]]
-
-                # Blob detection
-                result = self.detector.start(self.image, ROIs)
+#                 # Enhance image
+#                 self.image = self.enhancer.start(self.image)
+#                 
+#                 # Segment image according to grid 
+#                 if self.gridDetection:
+#                     self.image = self.segmenter.start(self.image)
+#                     ROIs = self.segmenter.ROIs
+#                 else:
+#                     ROIs = [[int(self.image.shape[1]/4), int(self.image.shape[0]/4),
+#                              int(self.image.shape[1]/2), int(self.image.shape[0]/2)]]
+# 
+#                 # Blob detection
+#                 result = self.detector.start(self.image, ROIs)
 
             except Exception as err:
                 traceback.print_exc()

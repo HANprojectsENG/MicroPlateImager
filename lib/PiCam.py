@@ -64,25 +64,38 @@ class PiVideoStream(QThread):
     def run(self):
         try:
             self.fps = FPS().start()
-            for f1 in self.previewStream:
+            for f2 in self.stream:
                 if (self.pause == True):
                     self.msg(self.name + ": paused.")
                     break # return from thread is needed
                 else:
                     self.rawCapture.truncate(0) # clear the stream in preparation for the next frame
-                    self.PreviewArray.truncate(0) # clear the stream in preparation for the next frame
-                    for f2 in self.stream:
-                        self.rawCapture.seek(0)
-                        self.CaptureFrame = f2.array
-                        self.signals.capReady.emit()
-                        break
-                    self.PreviewArray.seek(0)
-                    self.PreviewFrame = f1.array
+                    self.rawCapture.seek(0)
+                    self.CaptureFrame = f2.array
+                    self.signals.capReady.emit()
                     self.fps.update()
                     if self.startMillis is not None:
                         None
-                    self.startMillis = int(round(time.time() * 1000))
-                    self.signals.prvReady.emit()    
+                    self.startMillis = int(round(time.time() * 1000))            
+#             for f1 in self.previewStream:
+#                 if (self.pause == True):
+#                     self.msg(self.name + ": paused.")
+#                     break # return from thread is needed
+#                 else:
+#                     self.rawCapture.truncate(0) # clear the stream in preparation for the next frame
+#                     self.PreviewArray.truncate(0) # clear the stream in preparation for the next frame
+#                     for f2 in self.stream:
+#                         self.rawCapture.seek(0)
+#                         self.CaptureFrame = f2.array
+#                         self.signals.capReady.emit()
+#                         break
+#                     self.PreviewArray.seek(0)
+#                     self.PreviewFrame = f1.array
+#                     self.fps.update()
+#                     if self.startMillis is not None:
+#                         None
+#                     self.startMillis = int(round(time.time() * 1000))
+#                     self.signals.prvReady.emit()    
                            
         except Exception as err:
             print(err)
@@ -93,7 +106,8 @@ class PiVideoStream(QThread):
             self.camera.stop_preview()
             self.msg(self.name + ": quit.")
 
-    def initCamera(self, resolution=(640,480), monochrome=False, framerate=24, effect='none', use_video_port=False):
+    def initCamera(self, resolution=(640,480), monochrome=False, framerate=24, effect='none', use_video_port=True):
+        # multiple streams are only possible eith the video port!
         self.msg(self.name + "Init: resolution = " + str(resolution))
         self.camera.resolution = resolution        
         self.camera.image_effect = effect
@@ -103,14 +117,14 @@ class PiVideoStream(QThread):
         self.camera.framerate = framerate
         if self.monochrome:
             self.rawCapture = PiYArray(self.camera, size=self.camera.resolution)
-            self.PreviewArray = PiYArray(self.camera, size=(640,480))
-            self.stream = self.camera.capture_continuous(self.rawCapture, 'yuv', use_video_port)
-            self.previewStream = self.camera.capture_continuous(output=self.PreviewArray, format='yuv', use_video_port=use_video_port, splitter_port=1, resize=(640,480))
+#             self.PreviewArray = PiYArray(self.camera, size=(640,480))
+            self.stream = self.camera.capture_continuous(self.rawCapture, format='yuv', use_video_port=True, splitter_port=0)
+#             self.previewStream = self.camera.capture_continuous(output=self.PreviewArray, format='yuv', use_video_port=True, splitter_port=1, resize=(640,480))
         else:
             self.rawCapture = PiRGBArray(self.camera, size=self.camera.resolution)
-            self.PreviewArray = PiRGBArray(self.camera, size=(640,480))
-            self.stream = self.camera.capture_continuous(self.rawCapture, 'bgr', use_video_port)
-            self.previewStream = self.camera.capture_continuous(output=self.PreviewArray, format='bgr', use_video_port=use_video_port, splitter_port=1, resize=(640,480))
+#             self.PreviewArray = PiRGBArray(self.camera, size=(640,480))
+            self.stream = self.camera.capture_continuous(self.rawCapture, format='bgr', use_video_port=True, splitter_port=0)
+#             self.previewStream = self.camera.capture_continuous(output=self.PreviewArray, format='bgr', use_video_port=True, splitter_port=1, resize=(640,480))
 
         GeneralEventLoop = QEventLoop(self)
         QTimer.singleShot(2, GeneralEventLoop.exit)
@@ -193,3 +207,4 @@ def raw_resolution(resolution, splitter=False):
         fwidth = (width + 31) & ~31
     fheight = (height + 15) & ~15
     return fwidth, fheight
+    
