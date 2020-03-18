@@ -467,7 +467,7 @@ class StepperWellPositioning():
         WPE_Error = None
         new_column = 0
         new_row = 0
-        error_threshold = 100#50#120
+        error_threshold = 120#50#120 # higher number means lower error...
 
         ## Do while the well is not aligned with the light source. 
         while True:
@@ -489,7 +489,7 @@ class StepperWellPositioning():
 
                 ## Area error, surface smaller or equal to 0
                 if WPE_Error[1] <= 0:
-                    self.msg("Possibly something wrong with captured frame, retry with another snapshot")
+                    self.msg("Possibly soloops_mething wrong with captured frame, retry with another snapshot")
                     error_count = error_count + 1
                     if (error_count >=3):
                         self.msg("Error_count = " + str(error_count))
@@ -502,16 +502,16 @@ class StepperWellPositioning():
 #                     ## Some 
 #                     error_count = 0
 #                     if (abs(WPE_Error[0][0]-30) < (self.image.shape[0] / error_threshold) and abs(WPE_Error[0][1]+30) < (self.image.shape[0] / error_threshold)) or (loops_ >20): ## No more adjustments to make or system is oscilating
-#                         if loops_ > 20:
+#                         if loops_ > 20:loops_
 #                             self.msg("More than 20 correction loops, return False")
 #                             return False
 #                         self.msg("Returning from positioner controller, loops: " + str(loops_))
 #                         return True
 
                 ## Define controller variables for column and row | x and y.
-                # Don't know resolution [pxls/mm] so just guess a step
-                new_column = float(WPE_Error[0][0]) / 50.0
-                new_row = float(WPE_Error[0][1]) / 50.0
+                # Don't know resolution [px/mm] so just guess a step and lower on each step
+                new_column = float(WPE_Error[0][0]) / ((loops_+1)*20.0)
+                new_row = float(WPE_Error[0][1]) / ((loops_+1)*20.0)
                 column, row = self.get_current_well()
                 
                 ## if the error values or column and row are larger or equal to 1/120th of the image height. 
