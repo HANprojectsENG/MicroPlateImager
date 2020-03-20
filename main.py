@@ -626,6 +626,7 @@ if __name__ == '__main__':
                                            mwi.Well_Map, mwi.Well_Targets,
                                            str(mwi.settings_batch.value("Run/ID")),
                                            str(mwi.settings_batch.value("Run/info")),
+                                           str(mwi.settings_batch.value("Run/path")),
                                            mwi.getSec(str(mwi.settings_batch.value("Run/duration"))),
                                            mwi.getSec(str(mwi.settings_batch.value("Run/interleave"))))
 

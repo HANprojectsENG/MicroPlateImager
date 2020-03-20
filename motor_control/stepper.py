@@ -398,7 +398,7 @@ class StepperWellPositioning():
                         return False
                     else:
                         self.msg("Well positioning succeeded.")
-                        self.set_current_well(column, row)
+#                         self.set_current_well(column, row)
 
                         ## Manual confirmation needed. STM is to fast for the software to catch the last confirmation.
                         self.stepper_control.move_confirmed = True 
@@ -441,14 +441,14 @@ class StepperWellPositioning():
                     self.Stopped = True
                     self.signals.process_inactive.emit()
 
-                    ## Manual confirmation needed. STM is to fast for the software to catch the last confirmation.
+                    ## Manual confirmation needed. STM is too fast for the software to catch the last confirmation.
                     self.stepper_control.move_confirmed = True 
                     return False
                 else:
                     self.msg("Well positioning succeeded.")
-                    self.set_current_well(column, row)
+#                     self.set_current_well(column, row)
 
-                    ## Manual confirmation needed. STM is to fast for the software to catch the last confirmation.
+                    ## Manual confirmation needed. STM is too fast for the software to catch the last confirmation.
                     self.stepper_control.move_confirmed = True 
                     return True
             else:
@@ -467,7 +467,7 @@ class StepperWellPositioning():
         WPE_Error = None
         new_column = 0
         new_row = 0
-        error_threshold = 120#50#120 # higher number means lower error...
+        error_threshold = 100#50#120 # higher number means lower error...
 
         ## Do while the well is not aligned with the light source. 
         while True:
@@ -521,10 +521,12 @@ class StepperWellPositioning():
                     ## @note A small offset had to be added by the column and row controller variables as well
                     new_column += column # float(column)-float(new_column)
                     new_row += row # float(row) - float(new_row)
+                    new_column = round(new_column,1)
+                    new_row = round(new_row,1)
                     self.stepper_control.moveToWell(new_column, new_row)
                     self.set_current_well(new_column, new_row)
                 else:
-                    return True
+                    break
                 loops_ += 1
                 if loops_ > 20:
                     self.msg("More than 20 correction loops, return False")
@@ -533,6 +535,7 @@ class StepperWellPositioning():
                 #self.msg("Returning from alignment controller loop in StepperWellPositioning::goto_target")
                 print("Returning from alignment controller loop in StepperWellPositioning::goto_target")
                 return False
+          
         return True
 
     ## @brief StepperWellPositioning()::snapshot_request(self) emits the snapshot_request signal

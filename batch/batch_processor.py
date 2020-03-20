@@ -39,7 +39,7 @@ class BatchProcessor():
     ## @param info is the batch information.
     ## @param dur is the batch duration.
     ## @param interl is the time between the photographing of each well.
-    def __init__(self, well_controller, well_map, well_targets, ID, info, dur, interl):
+    def __init__(self, well_controller, well_map, well_targets, ID, info, path, dur, interl):
         #super().__init__()
         self.is_active = False
         self.well_positioner = well_controller
@@ -49,7 +49,9 @@ class BatchProcessor():
         self.batch_info = info
         self.duration = dur
         self.interleave = interl
-        return
+        self.path = os.path.sep.join([path, ID])
+        if not os.path.exists(self.path):
+            os.makedirs(self.path)
         
     ## @brief BatchProcessor()::msg emits the message signal. This emit will be catched by the logging slot function in main.py.
     ## @param message is the string message to be emitted.
@@ -95,10 +97,22 @@ class BatchProcessor():
     ## @brief BatchProcessor()::runBatch(self) runs the batch after it is started. 
     ## @note the interleave is actually the interleave + processingtime of the "for target in self.Well_Targets:" loop
     def runBatch(self):
+        recording_file_name = os.path.sep.join([self.path,'batch_positioning_results.csv'])
+        recording_file = open(recording_file_name, "w")
+        
+        # build csv file heading
+        record_str = ","
+        for target in self.Well_Targets:
+            record_str += ',' + str(self.Well_Map[target[0][1]][1][1]) + ',' + str(self.Well_Map[1][target[0][0]][0])
+        print(record_str)
+        recording_file.write(record_str + "\n")
+        
         while True:
             print("BatchProcessor thread check: " + str(QThread.currentThread()))
             ## Run start time
             run_start_time = current_milli_time()
+            actual_postions = []
+                
             for target in self.Well_Targets:
                 if not self.is_active:
                     self.signals.batch_inactive.emit()
@@ -110,9 +124,15 @@ class BatchProcessor():
                     row = target[0][0]
                     column = target[0][1]
                     self.msg("Target: " + str(target[0][2]))
-                    print("Target: " + str(target[0][2]))
+                    print("Target: at (" + str(self.Well_Map[column][1][1]) + ", " + str(self.Well_Map[1][row][0]) +")")
                     if (self.well_positioner.goto_well(self.Well_Map[column][1][1], self.Well_Map[1][row][0])): ## if found well
                         self.snapshot_request(str(self.batch_id) + "/" + str(target[0][2]))
+                        print("  >>>>>> Target should adapt to " + str(self.well_positioner.get_current_well()) + " <<<<<<")
+                        # JV: this doesn't work, apparently there is some other process that has an effect on this well map?
+#                         (self.Well_Map[1][row][0], self.Well_Map[column][1][1]) = self.well_positioner.get_current_well()
+#                         print("  Target adapted to (" + str(self.Well_Map[column][1][1]) + ", " + str(self.Well_Map[1][row][0]) +")")
+                        actual_postions.append(self.well_positioner.get_current_well())
+                        
                     while self.SnapshotTaken is False:
                         if not self.is_active:
                             self.signals.batch_inactive.emit()
@@ -145,10 +165,17 @@ class BatchProcessor():
                 self.msg("Waiting for: " + str(self.interleave*1000-run_time) + " s")
                 print("Waiting for: " + str(self.interleave*1000-run_time) + " s")
                 self.wait_ms(self.interleave*1000-run_time)
+                
+            if recording_file:
+                record_str = str(run_start_time) + ',' + str(run_time)
+                for actual_position in actual_postions:
+                    record_str += ',' + str(actual_position[0]) +','+ str(actual_position[1])
+                print(record_str)
+                recording_file.write(record_str + "\n")
             
-    
+        recording_file.close()
         #self.msg("Breaking out batch process")
-        print("Breaking out batch process")
+        print("Finishing batch process")
         return
 
     ## @brief BatchProcessor()::wait_ms(self, milliseconds) is a delay function.
