@@ -39,7 +39,11 @@ class GcodeSerial:
         GcodeSerial.ins+=1
         
         # make sure klipper service is active
-        os.system('sudo service klipper restart && sudo service klipper status')
+        os.system('sudo service klipper restart && sudo service klipper status | more')
+
+        # wait a bit before doing anything else
+        self.wait_ms(100)
+        
         return
         
     ## @brief GcodeSerial::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
@@ -138,7 +142,7 @@ class GcodeSerial:
         
             ## Stop klipper service and show its status
             print("\nDEBUG: stop klipper service")
-            os.system('sudo service klipper stop && sudo service klipper status')
+            os.system('sudo service klipper stop && sudo service klipper status | more')
         
             ## Disconnect if connection is true
             if self.getConnectionState():

@@ -12,7 +12,6 @@ import numpy as np
 import lib.signal as signal
 import motor_control.stepper as stepper
 import batch.batch_processor as batch_processor
-import motor_control.serial_printhat as serial_printhat
 
 from PySide2.QtWidgets import QPlainTextEdit, QApplication, QLabel, QPushButton, QHBoxLayout, QVBoxLayout, QGroupBox, QGridLayout, QDialog, QLineEdit, QFileDialog, QComboBox, QSizePolicy, QDoubleSpinBox, QGraphicsOpacityEffect, QGraphicsDropShadowEffect, QWidget
 from PySide2.QtGui import QFont, QColor, QPalette, QImage, QPixmap
@@ -79,6 +78,7 @@ class MainWindow(QDialog):
 
         self.setLayout(self.mainWindowLayout)
         self.resize(self.width(), self.height())
+        
 
     ## @brief Mainwindow(QDialog)::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
     ## @param message is the string message to be emitted.
