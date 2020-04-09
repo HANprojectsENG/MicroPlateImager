@@ -30,6 +30,8 @@ class BatchProcessor():
     interleave = 0
     start_time = 0
     end_time = 0
+    logging = True
+
     
     ## @brief BatchProcessor()::__init__ sets the batch settings
     ## @param well_controller is the well positioning class instance used to position the wells under the camera.
@@ -97,15 +99,18 @@ class BatchProcessor():
     ## @brief BatchProcessor()::runBatch(self) runs the batch after it is started. 
     ## @note the interleave is actually the interleave + processingtime of the "for target in self.Well_Targets:" loop
     def runBatch(self):
-        recording_file_name = os.path.sep.join([self.path,'batch_positioning_results.csv'])
-        recording_file = open(recording_file_name, "w")
+        if self.logging:
+            recording_file_name = os.path.sep.join([self.path,'batch_positioning_results.csv'])
+            recording_file = open(recording_file_name, "w")
         
-        # build csv file heading
-        record_str = "run_start_time, run_time,"
-        for target in self.Well_Targets:
-            record_str += ',' + str(self.Well_Map[target[0][1]][1][1]) + ',' + str(self.Well_Map[1][target[0][0]][0])
-        recording_file.write(record_str + "\n")
-
+            # build csv file heading
+            record_str = "run_start_time, run_time,"
+            for target in self.Well_Targets:
+                record_str += ',' + str(self.Well_Map[target[0][1]][1][1]) + ',' + str(self.Well_Map[1][target[0][0]][0])
+            recording_file.write(record_str + "\n")
+        else:
+            recording_file = None
+            
         while True:
             print("BatchProcessor thread check: " + str(QThread.currentThread()))
             ## Run start time
@@ -172,7 +177,9 @@ class BatchProcessor():
                 print(record_str)
                 recording_file.write(record_str + "\n")
             
-        recording_file.close()
+        if recording_file:
+            recording_file.close()
+            
         #self.msg("Breaking out batch process")
         print("Finishing batch process")
         return

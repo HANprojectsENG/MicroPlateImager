@@ -302,6 +302,7 @@ class StepperWellPositioning():
     WPE_target = None
     WPE_targetRadius = None
     Well_Map = None
+    log_fine_tuning = True
 
     ## @brief StepperWellPositioning()::__init__ initialises the stepper objects for X and Y axis and initialises the gcodeSerial to the class member variable.
     ## @param steppers is the StepperControl object representing the X- and Y-axis
@@ -472,12 +473,15 @@ class StepperWellPositioning():
         new_row = 0
         error_threshold = 200#50#120 # higher number means lower error...
 
-        column, row = self.get_current_well()
-        run_start_time = current_milli_time()
-        recording_file_name = os.path.sep.join([os.getcwd(),'goto_target_' + str(round(column)) + '_' + str(round(row)) + '_' + str(run_start_time) + '.csv'])
-        recording_file = open(recording_file_name, "w")
-        record_str = "run_time, WPE_target[0], WPE_target[1], WPE_Error[0][0], WPE_Error[0][1]" 
-        recording_file.write(record_str + "\n")                
+        if self.log_fine_tuning:
+            column, row = self.get_current_well()
+            run_start_time = current_milli_time()
+            recording_file_name = os.path.sep.join([os.getcwd(),'goto_target_' + str(round(column)) + '_' + str(round(row)) + '_' + str(run_start_time) + '.csv'])
+            recording_file = open(recording_file_name, "w")
+            record_str = "run_time, WPE_target[0], WPE_target[1], WPE_Error[0][0], WPE_Error[0][1]" 
+            recording_file.write(record_str + "\n")
+        else:
+            recording_file = None
         
         ## Do while the well is not aligned with the light source. 
         while True:
@@ -521,7 +525,7 @@ class StepperWellPositioning():
                 ## Define controller variables for column and row | x and y.
                 # Don't know resolution [px/mm] so just guess a step and lower on each step
                 new_column = float(WPE_Error[0][0]) / ((loops_+1)*20.0)
-                new_row = float(WPE_Error[0][1]) / ((loops_+1)*10.0)
+                new_row = float(WPE_Error[0][1]) / ((loops_+1)*15.0)
                 column, row = self.get_current_well()
 
                 run_time = current_milli_time()-run_start_time
@@ -551,7 +555,8 @@ class StepperWellPositioning():
                 print("Returning from alignment controller loop in StepperWellPositioning::goto_target")
                 return False
             
-        recording_file.close()                
+        if recording_file:
+            recording_file.close()                
           
         return True
 
