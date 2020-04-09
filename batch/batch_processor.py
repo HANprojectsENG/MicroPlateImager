@@ -101,12 +101,11 @@ class BatchProcessor():
         recording_file = open(recording_file_name, "w")
         
         # build csv file heading
-        record_str = ","
+        record_str = "run_start_time, run_time,"
         for target in self.Well_Targets:
             record_str += ',' + str(self.Well_Map[target[0][1]][1][1]) + ',' + str(self.Well_Map[1][target[0][0]][0])
-        print(record_str)
         recording_file.write(record_str + "\n")
-        
+
         while True:
             print("BatchProcessor thread check: " + str(QThread.currentThread()))
             ## Run start time

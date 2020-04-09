@@ -12,6 +12,9 @@ import os
 import sys
 import cv2
 from PySide2.QtCore import QTimer, Signal, Slot, QEventLoop, QObject, QSettings, QThread
+import time
+
+current_milli_time = lambda: int(round(time.time() * 1000))
 
 ## @brief StepperControl contains steppermotor specific information and creates G-code strings when called specific functions like turnRight().
 ## @author Gert van Lagen
@@ -262,11 +265,27 @@ class StepperControl():
         self.PrintHAT_serial.executeGcode(gcode_string)
         self.signals.process_inactive.emit() ## Stops current batch process if running
         return
-    
+
+    @Slot(float)
+    def setLightPWM(self, val):
+        ''' Set PrintHAT light output pin to PWM value.
+            Args:
+                val (float): PWM dutycycle, between 0.0 and 1.0.
+            Raises:
+            Returns:
+        '''
+        print("in function Steppercontrol::setLightPWM(self, val)")
+        if self.PrintHAT_serial.getConnectionState():
+            gcode_string = "SET_PIN PIN=light VALUE=" + str(val) + "\r\n"
+            self.PrintHAT_serial.executeGcode(gcode_string)        
+        else:
+            self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
+        return 
 
 ## @brief StepperWellPositioning(QObject) takes care of the positioning of the wells under the camera.
 ## @author Gert van Lagen
 ## @author Robin Meekers (StepperWellPositioning::goto_well, StepperWellPositioning::goto_target, StepperWellPositioning::snapshot*)
+## @author Jeroen Veen added light control    
 class StepperWellPositioning():
     signals = signal.signalClass()
     process_activity = False
@@ -282,6 +301,7 @@ class StepperWellPositioning():
     WPE = None
     WPE_target = None
     WPE_targetRadius = None
+    Well_Map = None
 
     ## @brief StepperWellPositioning()::__init__ initialises the stepper objects for X and Y axis and initialises the gcodeSerial to the class member variable.
     ## @param steppers is the StepperControl object representing the X- and Y-axis
@@ -336,6 +356,7 @@ class StepperWellPositioning():
         print("In goto_well function")
         self.signals.process_active.emit()
         self.Stopped = False
+        self.stepper_control.setLightPWM(1.0)
 
         ## If the Well Position Evaluator is not initialized.
         if self.WPE is None:
@@ -377,86 +398,68 @@ class StepperWellPositioning():
                 self.WPE.circle_minRadius = int(self.WPE_targetRadius * 0.8) ## Roughly the amount remaining if the target is on the edge between wells.
                 self.WPE.circle_maxRadius = int(self.WPE_targetRadius) ## The well can never be larger than the diaphragm of the light source.
                 
-                ## Homing succeeded, light source found, lets move to the first target of Well_map
-                self.stepper_control.moveToWell(column, row)
-                self.set_current_well(column, row)
-                
-                ## Too early evaluation by self.goto_target(), due to fast confirmation response of the PrintHAT STM, could result in a targetcircle placed on the light source.
-                self.wait_ms(4000)
+##                ## Homing succeeded, light source found, lets move to the first target of Well_map
+##                self.set_current_well(column, row)
+##                self.stepper_control.moveToWell(column, row)
                 self.signals.first_move.emit()
-
-                ## Arrived at location, use machine vision to correct position if necessary.
-                if self.process_activity is True:
-                    if not self.goto_target():
-                        self.msg("Well positioning not succeeded.")
-                        self.set_current_well(None, None) ## Never reached reference point
-                        self.Stopped = True
-                        self.signals.process_inactive.emit()
-
-                        ## Manual confirmation needed. STM is to fast for the software to catch the last confirmation.
-                        self.stepper_control.move_confirmed = True 
-                        return False
-                    else:
-                        self.msg("Well positioning succeeded.")
-#                         self.set_current_well(column, row)
-
-                        ## Manual confirmation needed. STM is to fast for the software to catch the last confirmation.
-                        self.stepper_control.move_confirmed = True 
-                else:
-                    print("Positioning process inactive, cannot call goto_target positioning controller function.")
-                    self.msg("Positioning process inactive, cannot call goto_target positioning controller function.")
-        
-        ## position known 
-        else:
-            if self.process_activity is True:
-                self.stepper_control.moveToWell(column, row)
-                
-                ## Wait for ms depending on moving distance
-                dist = math.sqrt(float(abs(float(column)-float(self.current_well_column)) * abs(float(column)-float(self.current_well_column))) + float(abs(float(row)-float(self.current_well_row)) * abs(float(row)-float(self.current_well_row))))
-                self.msg("Moving distance: " + str(dist))
-                if dist < 20:
-                    self.msg("Delay: 1000ms | dist: " + str(dist) + "mm")
-                    self.wait_ms(1000)
-                elif dist < 50:
-                    self.msg("Delay: 3000ms | dist: " + str(dist) + "mm")
-                    self.wait_ms(3000)
-                elif dist > 50 and dist < 70:
-                    self.msg("Delay: 5000ms | dist: " + str(dist) + "mm")
-                    self.wait_ms(5000)
-                elif dist > 70 and dist < 85:
-                    self.msg("Delay: 8000ms | dist: " + str(dist) + "mm")
-                    self.wait_ms(8000)
-                elif dist > 85:
-                    self.msg("Delay: 11000ms | dist: " + str(dist) + "mm")
-                    self.wait_ms(11000)
-                else:
-                    self.msg("Delay: 4000ms | Unknown dist: " + str(dist) + "mm")
-                    self.wait_ms(4000)
-                
-                self.set_current_well(column, row)
-
-                if not self.goto_target():
-                    self.msg("Well positioning not succeeded.")
-                    self.set_current_well(None, None) ## Never reached reference point
-                    self.Stopped = True
-                    self.signals.process_inactive.emit()
-
-                    ## Manual confirmation needed. STM is too fast for the software to catch the last confirmation.
-                    self.stepper_control.move_confirmed = True 
-                    return False
-                else:
-                    self.msg("Well positioning succeeded.")
-#                     self.set_current_well(column, row)
-
-                    ## Manual confirmation needed. STM is too fast for the software to catch the last confirmation.
-                    self.stepper_control.move_confirmed = True 
-                    return True
             else:
-                print("Positioning process inactive, cannot call goto_target positioning controller function.")
-                self.msg("Positioning process inactive, cannot call goto_target positioning controller function.")
+                return False
+       
+        ## position known 
+        if self.process_activity is True:
+
+            # JV: column and row is probablyX and Y in Robin's functions, also in Gert's functions?
+            self.stepper_control.moveToWell(column, row)
+            
+            ## Wait for ms depending on moving distance, JV:why?
+            if self.current_well_column is None or self.current_well_row is None:
+                dist = 50
+            else:
+                dist = math.sqrt(float(abs(float(column)-float(self.current_well_column)) * abs(float(column)-float(self.current_well_column))) + float(abs(float(row)-float(self.current_well_row)) * abs(float(row)-float(self.current_well_row))))
+            self.msg("Moving distance: " + str(dist))
+            if dist < 20:
+                self.msg("Delay: 1000ms | dist: " + str(dist) + "mm")
+                self.wait_ms(1000)
+            elif dist < 50:
+                self.msg("Delay: 3000ms | dist: " + str(dist) + "mm")
+                self.wait_ms(3000)
+            elif dist > 50 and dist < 70:
+                self.msg("Delay: 5000ms | dist: " + str(dist) + "mm")
+                self.wait_ms(5000)
+            elif dist > 70 and dist < 85:
+                self.msg("Delay: 8000ms | dist: " + str(dist) + "mm")
+                self.wait_ms(8000)
+            elif dist > 85:
+                self.msg("Delay: 11000ms | dist: " + str(dist) + "mm")
+                self.wait_ms(11000)
+            else:
+                self.msg("Delay: 4000ms | Unknown dist: " + str(dist) + "mm")
+                self.wait_ms(4000)
+            
+            self.set_current_well(column, row)
+
+            if not self.goto_target():
+                self.msg("Well positioning not succeeded.")
+                self.set_current_well(None, None) ## Never reached reference point
+                self.Stopped = True
+                self.signals.process_inactive.emit()
+
+                ## Manual confirmation needed. STM is too fast for the software to catch the last confirmation.
+                self.stepper_control.move_confirmed = True 
+                return False
+            else:
+                self.msg("Well positioning succeeded.")
+                ## Manual confirmation needed. STM is too fast for the software to catch the last confirmation.
+                self.stepper_control.move_confirmed = True
+
+        else:
+            print("Positioning process inactive, cannot call goto_target positioning controller function.")
+            self.msg("Positioning process inactive, cannot call goto_target positioning controller function.")
         ## Different row?
         if row != self.current_well_row or column != self.current_well_column:
             self.msg("moving from: (" + str(self.current_well_row) + " | " + str(self.current_well_column) + ") to: (" + str(row) + " | " + str(column) + ")")
+            
+        self.stepper_control.setLightPWM(0.0)
         return True
 
     ## @brief StepperWellPositioning()::goto_target(self) evaluates the target circle using class Well_Position_Evaluator, updates the snapshot, 
@@ -467,8 +470,15 @@ class StepperWellPositioning():
         WPE_Error = None
         new_column = 0
         new_row = 0
-        error_threshold = 100#50#120 # higher number means lower error...
+        error_threshold = 200#50#120 # higher number means lower error...
 
+        column, row = self.get_current_well()
+        run_start_time = current_milli_time()
+        recording_file_name = os.path.sep.join([os.getcwd(),'goto_target_' + str(round(column)) + '_' + str(round(row)) + '_' + str(run_start_time) + '.csv'])
+        recording_file = open(recording_file_name, "w")
+        record_str = "run_time, WPE_target[0], WPE_target[1], WPE_Error[0][0], WPE_Error[0][1]" 
+        recording_file.write(record_str + "\n")                
+        
         ## Do while the well is not aligned with the light source. 
         while True:
             if (self.stepper_control.move_confirmed is True):
@@ -489,14 +499,14 @@ class StepperWellPositioning():
 
                 ## Area error, surface smaller or equal to 0
                 if WPE_Error[1] <= 0:
-                    self.msg("Possibly soloops_mething wrong with captured frame, retry with another snapshot")
+                    self.msg("Possibly something wrong with captured frame, retry with another snapshot")
                     error_count = error_count + 1
                     if (error_count >=3):
                         self.msg("Error_count = " + str(error_count))
                         return False
                     continue
                 else:
-                    self.msg("Well found at (" + str(WPE_Error[0][0]) + " | " + str(WPE_Error[0][1]) + ")")
+                    self.msg("Well found at offset (" + str(WPE_Error[0][0]) + " | " + str(WPE_Error[0][1]) + ")")
                     self.signals.well_located.emit((self.WPE_target[0]+WPE_Error[0][0], self.WPE_target[1]+WPE_Error[0][1], WPE_Error[2]))
 
 #                     ## Some 
@@ -511,8 +521,13 @@ class StepperWellPositioning():
                 ## Define controller variables for column and row | x and y.
                 # Don't know resolution [px/mm] so just guess a step and lower on each step
                 new_column = float(WPE_Error[0][0]) / ((loops_+1)*20.0)
-                new_row = float(WPE_Error[0][1]) / ((loops_+1)*20.0)
+                new_row = float(WPE_Error[0][1]) / ((loops_+1)*10.0)
                 column, row = self.get_current_well()
+
+                run_time = current_milli_time()-run_start_time
+                if recording_file:
+                    record_str = str(run_time) + ',' + str(self.WPE_target[0]) + ',' + str(self.WPE_target[1]) + ',' + str(WPE_Error[0][0]) + ',' + str(WPE_Error[0][1]) 
+                    recording_file.write(record_str + "\n")                
                 
                 ## if the error values or column and row are larger or equal to 1/120th of the image height. 
                 ## @note Detection software returned incorrect error. Solved by the small offset (-30 for the column, +30 for the row) added to the error value. 
@@ -535,6 +550,8 @@ class StepperWellPositioning():
                 #self.msg("Returning from alignment controller loop in StepperWellPositioning::goto_target")
                 print("Returning from alignment controller loop in StepperWellPositioning::goto_target")
                 return False
+            
+        recording_file.close()                
           
         return True
 
@@ -588,6 +605,7 @@ class StepperWellPositioning():
 
     @Slot()
     def close(self):
+        self.stepper_control.setLightPWM(0.0)        
         self.process_activity = False
         self.Stopped = True
         return

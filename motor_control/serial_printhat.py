@@ -9,6 +9,7 @@ import lib.signal as signal
 
 from PySide2.QtWidgets import *
 from PySide2.QtCore import QTimer, QEventLoop, QTimer
+from time import sleep
 
 ## @brief class GcodeSerial handles the /tmp/printer pseudoserial connection and writes incoming G-code. It also reads responses of the serial port.
 ## @author Gert van Lagen
@@ -41,8 +42,9 @@ class GcodeSerial:
         # make sure klipper service is active
         os.system('sudo service klipper restart && sudo service klipper status | more')
 
-        # wait a bit before doing anything else
-        self.wait_ms(100)
+        # wait a little bit before doing anything else
+##        self.wait_ms(100)
+        sleep(.1)
         
         return
         
