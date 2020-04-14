@@ -303,6 +303,7 @@ class StepperWellPositioning():
     WPE_targetRadius = None
     Well_Map = None
     log_fine_tuning = True
+    diaphragm_diameter = 12.0 ## mm
 
     ## @brief StepperWellPositioning()::__init__ initialises the stepper objects for X and Y axis and initialises the gcodeSerial to the class member variable.
     ## @param steppers is the StepperControl object representing the X- and Y-axis
@@ -471,7 +472,8 @@ class StepperWellPositioning():
         WPE_Error = None
         new_column = 0
         new_row = 0
-        error_threshold = 200#50#120 # higher number means lower error...
+        error_threshold = 100#50#120 # higher number means lower error...
+        resolution = self.diaphragm_diameter/self.WPE_targetRadius # [mm/px]
 
         if self.log_fine_tuning:
             column, row = self.get_current_well()
@@ -523,9 +525,14 @@ class StepperWellPositioning():
 #                         return True
 
                 ## Define controller variables for column and row | x and y.
-                # Don't know resolution [px/mm] so just guess a step and lower on each step
-                new_column = float(WPE_Error[0][0]) / ((loops_+1)*20.0)
-                new_row = float(WPE_Error[0][1]) / ((loops_+1)*15.0)
+               
+##                new_column = float(WPE_Error[0][0]) / ((loops_+1)*20.0)
+##                new_row = float(WPE_Error[0][1]) / ((loops_+1)*15.0)
+##                column, row = self.get_current_well()
+
+                # Decrease stepsize on each iteration for smooth convergence
+                new_column = float(WPE_Error[0][0])*resolution / (loops_+1)
+                new_row = float(WPE_Error[0][1])*resolution / (loops_+1)
                 column, row = self.get_current_well()
 
                 run_time = current_milli_time()-run_start_time
