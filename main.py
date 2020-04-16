@@ -381,8 +381,16 @@ class MainWindow(QDialog):
                 )
                 
         ## load the wells to process
-        self.settings_batch.beginReadArray("Wells")
-        Well_KeyList = self.settings_batch.childKeys()
+        size = self.settings_batch.beginReadArray("Wells")
+        
+        Well_KeyList = []
+        for i in range(0,size):
+            self.settings_batch.setArrayIndex(i)
+            Well_KeyList.append(self.settings_batch.childKeys()[0])
+##            val = self.settings_batch.value(key)
+        self.settings_batch.endArray()
+        
+##        Well_KeyList = self.settings_batch.childKeys()
         print("Found (" + str(len(Well_KeyList)) + "): " + str(Well_KeyList))
         
         self.Well_Targets = np.empty((len(Well_KeyList), 1),
@@ -608,7 +616,10 @@ if __name__ == '__main__':
     steppers = stepper.StepperControl()
     
     ## @param stepper_well_positioning is the positioning instance of the wells making use of the steppers control class instance.
-    stepper_well_positioning = stepper.StepperWellPositioning(steppers, mwi.Well_Map)
+    path = os.path.sep.join([mwi.settings_batch.value("Run/path"), mwi.settings_batch.value("Run/ID")])
+    if not os.path.exists(path):
+        os.makedirs(path)
+    stepper_well_positioning = stepper.StepperWellPositioning(steppers, mwi.Well_Map, path)
 
     ## @param Cam_Capturestream records images from the pi camera
     Cam_Capturestream = PiVideoStream(resolution=(int(mwi.settings.value("Camera/width")),

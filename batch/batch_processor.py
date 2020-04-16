@@ -59,7 +59,7 @@ class BatchProcessor():
     ## @param message is the string message to be emitted.
     @Slot(str)
     def msg(self, message):
-        if message is not None:
+        if message:
             self.signals.mes.emit(self.__class__.__name__ + ": " + str(message))
         return
 
@@ -131,10 +131,8 @@ class BatchProcessor():
                     print("Target: at (" + str(self.Well_Map[column][1][1]) + ", " + str(self.Well_Map[1][row][0]) +")")
                     if (self.well_positioner.goto_well(self.Well_Map[column][1][1], self.Well_Map[1][row][0])): ## if found well
                         self.snapshot_request(str(self.batch_id) + "/" + str(target[0][2]))
-                        print("  >>>>>> Target should adapt to " + str(self.well_positioner.get_current_well()) + " <<<<<<")
-                        # JV: this doesn't work, apparently there is some other process that has an effect on this well map?
-#                         (self.Well_Map[1][row][0], self.Well_Map[column][1][1]) = self.well_positioner.get_current_well()
-#                         print("  Target adapted to (" + str(self.Well_Map[column][1][1]) + ", " + str(self.Well_Map[1][row][0]) +")")
+                        (self.Well_Map[1][row][0], self.Well_Map[column][1][1]) = self.well_positioner.get_current_well()
+                        print("  Target adapted to (" + str(self.Well_Map[column][1][1]) + ", " + str(self.Well_Map[1][row][0]) +")")
                         actual_postions.append(self.well_positioner.get_current_well())
                         
                     while self.SnapshotTaken is False:

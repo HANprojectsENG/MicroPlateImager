@@ -35,7 +35,7 @@ class StepperControl():
     ## @brief StepperControl::msg(self, message) emits the message signal. This emit will be catched by the logging slot function in main.py.
     ## @param message is the string message to be emitted.
     def msg(self, message):
-        if message is not None:
+        if message:
             self.signals.mes.emit(self.__class__.__name__ + ": " + str(message))
         return
 
@@ -97,7 +97,7 @@ class StepperControl():
             while (read.find(confirmation, 0, len(read)) <= 0) and (read.find(triggered, 0, len(read)) <= 0):
                 read = str(self.PrintHAT_serial.readPort())
                 ## Manually confirmed somewhere in software
-                if self.homing_confirmed is True:
+                if self.homing_confirmed:
                     self.msg("Homing manually confirmed in software")
                     break
             
@@ -137,7 +137,7 @@ class StepperControl():
                     #self.msg("Move confirmed by STM")
                     self.move_confirmed = True
                 ## If manually confirmed somewhere in software
-                if self.move_confirmed is True:
+                if self.move_confirmed:
                     break    
             
             self.setPositionX(x_pos)
@@ -151,7 +151,7 @@ class StepperControl():
     ## @param column is the desired X-position
     ## @param row is the desired Y-position
     def moveToWell(self, column, row):
-        print("StepperControl::moveToWell thread check: " + str(QThread.currentThread()))
+##        print("StepperControl::moveToWell thread check: " + str(QThread.currentThread()))
         self.move_confirmed = False
         read = str
         confirmation = 'ok'
@@ -162,15 +162,16 @@ class StepperControl():
             self.PrintHAT_serial.executeGcode(wait_for_finishing)
 
             read = str(self.PrintHAT_serial.readPort())
-            while (read.find(confirmation, 0, len(read)) <= 0) and self.move_confirmed is False:
-                #print("Waiting for moveToWell move confirmation")
-                read = str(self.PrintHAT_serial.readPort())
+            while (read.find(confirmation, 0, len(read)) <= 0) and not self.move_confirmed:
+                print("Waiting for moveToWell move confirmation")
+##                read = str(self.PrintHAT_serial.readPort())
                 ## If manually confirmed somewhere in software
-                if self.move_confirmed is True:
+                if self.move_confirmed:
                     #self.msg("Move to well manually confirmed in software")
                     break  
                 if read.find(confirmation, 0, len(read)) >= 0:
-                    #self.msg("Move confirmed by STM")
+##                    self.msg("Move confirmed by STM")
+                    print("Move confirmed by STM")
                     self.move_confirmed = True
                     break  
 
@@ -274,7 +275,6 @@ class StepperControl():
             Raises:
             Returns:
         '''
-        print("in function Steppercontrol::setLightPWM(self, val)")
         if self.PrintHAT_serial.getConnectionState():
             gcode_string = "SET_PIN PIN=light VALUE=" + str(val) + "\r\n"
             self.PrintHAT_serial.executeGcode(gcode_string)        
@@ -308,9 +308,10 @@ class StepperWellPositioning():
     ## @brief StepperWellPositioning()::__init__ initialises the stepper objects for X and Y axis and initialises the gcodeSerial to the class member variable.
     ## @param steppers is the StepperControl object representing the X- and Y-axis
     ## @param Well_data contains the target well specified by the user in the batch.ini file
-    def __init__(self, steppers, Well_data):
+    def __init__(self, steppers, Well_data, record_path):
         self.stepper_control = steppers
         self.Well_Map = Well_data
+        self.path = record_path
         return
 
     ## @brief StepperWellPositioning()::msg emits the message signal. This emit will be catched by the logging slot function in main.py.
@@ -378,7 +379,7 @@ class StepperWellPositioning():
             self.stepper_control.homeXY()
 
             ## If homing is succeeded and confirmed by the STM of the Wrecklab PrintHAT
-            if self.stepper_control.homing_confirmed is True:
+            if self.stepper_control.homing_confirmed:
                 self.image = None
                 self.snapshot_request()
                 self.snapshot_await()
@@ -408,35 +409,35 @@ class StepperWellPositioning():
                 return False
        
         ## position known 
-        if self.process_activity is True:
+        if self.process_activity:
 
-            # JV: column and row is probablyX and Y in Robin's functions, also in Gert's functions?
+            # JV: column and row is probably X and Y in Robin's functions, also in Gert's functions?
             self.stepper_control.moveToWell(column, row)
             
             ## Wait for ms depending on moving distance, JV:why?
             if self.current_well_column is None or self.current_well_row is None:
-                dist = 50
+                dist = 60
             else:
                 dist = math.sqrt(float(abs(float(column)-float(self.current_well_column)) * abs(float(column)-float(self.current_well_column))) + float(abs(float(row)-float(self.current_well_row)) * abs(float(row)-float(self.current_well_row))))
             self.msg("Moving distance: " + str(dist))
             if dist < 20:
-                self.msg("Delay: 1000ms | dist: " + str(dist) + "mm")
-                self.wait_ms(1000)
+                self.msg("Delay: 1500ms | dist: " + str(dist) + "mm")
+                self.wait_ms(1500)
             elif dist < 50:
-                self.msg("Delay: 3000ms | dist: " + str(dist) + "mm")
-                self.wait_ms(3000)
-            elif dist > 50 and dist < 70:
-                self.msg("Delay: 5000ms | dist: " + str(dist) + "mm")
-                self.wait_ms(5000)
-            elif dist > 70 and dist < 85:
-                self.msg("Delay: 8000ms | dist: " + str(dist) + "mm")
-                self.wait_ms(8000)
+                self.msg("Delay: 3500ms | dist: " + str(dist) + "mm")
+                self.wait_ms(3500)
+            elif dist < 70:
+                self.msg("Delay: 5500ms | dist: " + str(dist) + "mm")
+                self.wait_ms(5500)
+            elif dist < 85:
+                self.msg("Delay: 8500ms | dist: " + str(dist) + "mm")
+                self.wait_ms(8500)
             elif dist > 85:
-                self.msg("Delay: 11000ms | dist: " + str(dist) + "mm")
-                self.wait_ms(11000)
+                self.msg("Delay: 11500ms | dist: " + str(dist) + "mm")
+                self.wait_ms(11500)
             else:
-                self.msg("Delay: 4000ms | Unknown dist: " + str(dist) + "mm")
-                self.wait_ms(4000)
+                self.msg("Delay: 4500ms | Unknown dist: " + str(dist) + "mm")
+                self.wait_ms(4500)
             
             self.set_current_well(column, row)
 
@@ -478,7 +479,7 @@ class StepperWellPositioning():
         if self.log_fine_tuning:
             column, row = self.get_current_well()
             run_start_time = current_milli_time()
-            recording_file_name = os.path.sep.join([os.getcwd(),'goto_target_' + str(round(column)) + '_' + str(round(row)) + '_' + str(run_start_time) + '.csv'])
+            recording_file_name = os.path.sep.join([self.path, 'goto_target_' + str(round(column)) + '_' + str(round(row)) + '_' + str(run_start_time) + '.csv'])
             recording_file = open(recording_file_name, "w")
             record_str = "run_time, WPE_target[0], WPE_target[1], WPE_Error[0][0], WPE_Error[0][1]" 
             recording_file.write(record_str + "\n")
@@ -487,8 +488,8 @@ class StepperWellPositioning():
         
         ## Do while the well is not aligned with the light source. 
         while True:
-            if (self.stepper_control.move_confirmed is True):
-                if self.process_activity is False:
+            if (self.stepper_control.move_confirmed):
+                if not self.process_activity:
                     #self.msg("!Returning from alignment controller loop in StepperWellPositioning::goto_target")
                     print("!Returning from alignment controller loop in StepperWellPositioning::goto_target")
                     return False
@@ -531,8 +532,8 @@ class StepperWellPositioning():
 ##                column, row = self.get_current_well()
 
                 # Decrease stepsize on each iteration for smooth convergence
-                new_column = float(WPE_Error[0][0])*resolution / (loops_+1)
-                new_row = float(WPE_Error[0][1])*resolution / (loops_+1)
+                new_column = .5*float(WPE_Error[0][0])*resolution / (loops_+1)
+                new_row = .5*float(WPE_Error[0][1])*resolution / (loops_+1)
                 column, row = self.get_current_well()
 
                 run_time = current_milli_time()-run_start_time
@@ -555,9 +556,9 @@ class StepperWellPositioning():
                     break
                 loops_ += 1
                 if loops_ > 20:
-                    self.msg("More than 20 correction loops, return False")
-                    return False
-            if self.process_activity is False:
+                    self.msg("More than 20 correction loops, giving up")
+                    return True
+            if not self.process_activity:
                 #self.msg("Returning from alignment controller loop in StepperWellPositioning::goto_target")
                 print("Returning from alignment controller loop in StepperWellPositioning::goto_target")
                 return False
