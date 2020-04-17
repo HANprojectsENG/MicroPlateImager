@@ -158,14 +158,14 @@ class BatchProcessor():
 
             run_time = current_milli_time()-run_start_time
             self.msg("Run time: " + str(run_time))
-            print("Run time: " + str(run_time) + "\nWaiting for " + str(self.interleave*1000-run_time) + " s")
+            print("Run time: " + str(run_time) + "\nWaiting for " + str(self.interleave*1000-run_time) + " ms")
             if self.interleave*1000-run_time < 0:
                 self.msg("To short interleave, please increase the interleave to at least: " + str(run_time))
                 print("To short interleave, please increase the interleave to at least: " + str(run_time))
             else:
                 ## Wait for the specified interleave minus the run_time of one run 
-                self.msg("Waiting for: " + str(self.interleave*1000-run_time) + " s")
-                print("Waiting for: " + str(self.interleave*1000-run_time) + " s")
+                self.msg("Waiting for: " + str(self.interleave*1000-run_time) + " ms")
+                print("Waiting for: " + str(self.interleave*1000-run_time) + " ms")
                 self.wait_ms(self.interleave*1000-run_time)
                 
             if recording_file:

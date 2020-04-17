@@ -280,7 +280,25 @@ class StepperControl():
             self.PrintHAT_serial.executeGcode(gcode_string)        
         else:
             self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
-        return 
+        return
+
+    def enableMotors(self):
+        if self.PrintHAT_serial.getConnectionState():
+            gcode_string = "M17\r\n"
+            self.PrintHAT_serial.executeGcode(gcode_string)
+            self.msg("DEBUG: Enable motors using M17 G-code command")
+        else:
+            self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
+        return
+
+    def disableMotors(self):
+        if self.PrintHAT_serial.getConnectionState():
+            gcode_string = "M18\r\n"
+            self.PrintHAT_serial.executeGcode(gcode_string)
+            self.msg("DEBUG: Disable motors using M18 G-code command")
+        else:
+            self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
+        return
 
 ## @brief StepperWellPositioning(QObject) takes care of the positioning of the wells under the camera.
 ## @author Gert van Lagen
@@ -302,7 +320,7 @@ class StepperWellPositioning():
     WPE_target = None
     WPE_targetRadius = None
     Well_Map = None
-    log_fine_tuning = True
+    log_fine_tuning = False
     diaphragm_diameter = 12.0 ## mm
 
     ## @brief StepperWellPositioning()::__init__ initialises the stepper objects for X and Y axis and initialises the gcodeSerial to the class member variable.
@@ -357,6 +375,7 @@ class StepperWellPositioning():
     @Slot()
     def goto_well(self, row, column):
         print("In goto_well function")
+        self.stepper_control.enableMotors()
         self.signals.process_active.emit()
         self.Stopped = False
         self.stepper_control.setLightPWM(1.0)
@@ -421,23 +440,23 @@ class StepperWellPositioning():
                 dist = math.sqrt(float(abs(float(column)-float(self.current_well_column)) * abs(float(column)-float(self.current_well_column))) + float(abs(float(row)-float(self.current_well_row)) * abs(float(row)-float(self.current_well_row))))
             self.msg("Moving distance: " + str(dist))
             if dist < 20:
-                self.msg("Delay: 1500ms | dist: " + str(dist) + "mm")
-                self.wait_ms(1500)
+                self.msg("Delay: 1999ms | dist: " + str(dist) + "mm")
+                self.wait_ms(1999)
             elif dist < 50:
-                self.msg("Delay: 3500ms | dist: " + str(dist) + "mm")
-                self.wait_ms(3500)
+                self.msg("Delay: 3999ms | dist: " + str(dist) + "mm")
+                self.wait_ms(3999)
             elif dist < 70:
-                self.msg("Delay: 5500ms | dist: " + str(dist) + "mm")
-                self.wait_ms(5500)
+                self.msg("Delay: 5999ms | dist: " + str(dist) + "mm")
+                self.wait_ms(5999)
             elif dist < 85:
-                self.msg("Delay: 8500ms | dist: " + str(dist) + "mm")
-                self.wait_ms(8500)
+                self.msg("Delay: 8999ms | dist: " + str(dist) + "mm")
+                self.wait_ms(8999)
             elif dist > 85:
-                self.msg("Delay: 11500ms | dist: " + str(dist) + "mm")
-                self.wait_ms(11500)
+                self.msg("Delay: 11999ms | dist: " + str(dist) + "mm")
+                self.wait_ms(11999)
             else:
-                self.msg("Delay: 4500ms | Unknown dist: " + str(dist) + "mm")
-                self.wait_ms(4500)
+                self.msg("Delay: 4999ms | Unknown dist: " + str(dist) + "mm")
+                self.wait_ms(4999)
             
             self.set_current_well(column, row)
 
@@ -461,7 +480,9 @@ class StepperWellPositioning():
         ## Different row?
         if row != self.current_well_row or column != self.current_well_column:
             self.msg("moving from: (" + str(self.current_well_row) + " | " + str(self.current_well_column) + ") to: (" + str(row) + " | " + str(column) + ")")
-            
+
+## why can we not disable motors during steps?          
+##        self.stepper_control.disableMotors()
         self.stepper_control.setLightPWM(0.0)
         return True
 
@@ -476,9 +497,9 @@ class StepperWellPositioning():
         error_threshold = 100#50#120 # higher number means lower error...
         resolution = self.diaphragm_diameter/self.WPE_targetRadius # [mm/px]
 
+        run_start_time = current_milli_time()
         if self.log_fine_tuning:
             column, row = self.get_current_well()
-            run_start_time = current_milli_time()
             recording_file_name = os.path.sep.join([self.path, 'goto_target_' + str(round(column)) + '_' + str(round(row)) + '_' + str(run_start_time) + '.csv'])
             recording_file = open(recording_file_name, "w")
             record_str = "run_time, WPE_target[0], WPE_target[1], WPE_Error[0][0], WPE_Error[0][1]" 
@@ -531,23 +552,22 @@ class StepperWellPositioning():
 ##                new_row = float(WPE_Error[0][1]) / ((loops_+1)*15.0)
 ##                column, row = self.get_current_well()
 
-                # Decrease stepsize on each iteration for smooth convergence
-                new_column = .5*float(WPE_Error[0][0])*resolution / (loops_+1)
-                new_row = .5*float(WPE_Error[0][1])*resolution / (loops_+1)
-                column, row = self.get_current_well()
-
                 run_time = current_milli_time()-run_start_time
                 if recording_file:
                     record_str = str(run_time) + ',' + str(self.WPE_target[0]) + ',' + str(self.WPE_target[1]) + ',' + str(WPE_Error[0][0]) + ',' + str(WPE_Error[0][1]) 
                     recording_file.write(record_str + "\n")                
-                
-                ## if the error values or column and row are larger or equal to 1/120th of the image height. 
-                ## @note Detection software returned incorrect error. Solved by the small offset (-30 for the column, +30 for the row) added to the error value. 
-#                 if abs(WPE_Error[0][0]-30) >= (self.image.shape[0] / error_threshold) or abs(WPE_Error[0][1]+30) >= (self.image.shape[0] / error_threshold):
-                if abs(WPE_Error[0][0]) >= (self.image.shape[1] / error_threshold) or abs(WPE_Error[0][1]) >= (self.image.shape[0] / error_threshold):
-                    ## @note A small offset had to be added by the column and row controller variables as well
-                    new_column += column # float(column)-float(new_column)
-                    new_row += row # float(row) - float(new_row)
+
+                error = np.sqrt(WPE_Error[0][0]**2 + WPE_Error[0][1]**2)
+                threshold = min(self.image.shape[0:1]) / error_threshold
+                print(" well placement error: {}, while acceptable error:{}".format(error,threshold))
+
+                if error > threshold:
+                    # Decrease stepsize on each iteration for smooth convergence
+                    new_column = float(WPE_Error[0][0])*resolution / (loops_+1)
+                    new_row = float(WPE_Error[0][1])*resolution / (loops_+1)
+                    column, row = self.get_current_well()
+                    new_column += column
+                    new_row += row
                     new_column = round(new_column,1)
                     new_row = round(new_row,1)
                     self.stepper_control.moveToWell(new_column, new_row)
@@ -555,8 +575,8 @@ class StepperWellPositioning():
                 else:
                     break
                 loops_ += 1
-                if loops_ > 20:
-                    self.msg("More than 20 correction loops, giving up")
+                if loops_ > 10:
+                    self.msg("More than 10 correction loops, giving up")
                     return True
             if not self.process_activity:
                 #self.msg("Returning from alignment controller loop in StepperWellPositioning::goto_target")
