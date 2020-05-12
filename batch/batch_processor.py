@@ -110,7 +110,8 @@ class BatchProcessor():
             recording_file.write(record_str + "\n")
         else:
             recording_file = None
-            
+
+        first_run = True
         while True:
             print("BatchProcessor thread check: " + str(QThread.currentThread()))
             ## Run start time
@@ -127,9 +128,9 @@ class BatchProcessor():
                 else:
                     row = target[0][0]
                     column = target[0][1]
-                    self.msg("Target: " + str(target[0][2]))
-                    print("Target: at (" + str(self.Well_Map[column][1][1]) + ", " + str(self.Well_Map[1][row][0]) +")")
-                    if (self.well_positioner.goto_well(self.Well_Map[column][1][1], self.Well_Map[1][row][0])): ## if found well
+                    self.msg("Target: " + str(target[0][2]) )
+##                    print("Target: at (" + str(self.Well_Map[column][1][1]) + ", " + str(self.Well_Map[1][row][0]) +")" + ", first run: " + str(first_run))
+                    if (self.well_positioner.goto_well(self.Well_Map[column][1][1], self.Well_Map[1][row][0], first_run)): ## if found well
                         self.snapshot_request(str(self.batch_id) + "/" + str(target[0][2]))
                         (self.Well_Map[1][row][0], self.Well_Map[column][1][1]) = self.well_positioner.get_current_well()
                         print("  Target adapted to (" + str(self.Well_Map[column][1][1]) + ", " + str(self.Well_Map[1][row][0]) +")")
@@ -155,6 +156,10 @@ class BatchProcessor():
                 else:
                     self.msg("Remaining time " + str(self.end_time-current_milli_time()))
                     print("Remaining time " + str(self.end_time-current_milli_time()) + " ms")
+                    
+            # first run is completed, remove this statemant to adapt to well-position in stead of feedforward
+            if actual_postions:
+                first_run = False 
 
             run_time = current_milli_time()-run_start_time
             self.msg("Run time: " + str(run_time))

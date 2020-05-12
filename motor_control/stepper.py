@@ -2,7 +2,7 @@
 ## @brief stepper.py contains classes for stepper motor control, G-code string creation, homing and well positioning.
 ## @author Gert van Lagen
 
-import main
+##import main
 import motor_control.serial_printhat as serial_printhat
 import lib.imageProcessor as imageProcessor
 import lib.signal as signal
@@ -267,7 +267,6 @@ class StepperControl():
         self.signals.process_inactive.emit() ## Stops current batch process if running
         return
 
-    @Slot(float)
     def setLightPWM(self, val):
         ''' Set PrintHAT light output pin to PWM value.
             Args:
@@ -283,6 +282,7 @@ class StepperControl():
         return
 
     def enableMotors(self):
+## why can we not re-enable motors during steps? Because M17 is not implemented by Klipper
         if self.PrintHAT_serial.getConnectionState():
             gcode_string = "M17\r\n"
             self.PrintHAT_serial.executeGcode(gcode_string)
@@ -293,9 +293,10 @@ class StepperControl():
 
     def disableMotors(self):
         if self.PrintHAT_serial.getConnectionState():
-            gcode_string = "M18\r\n"
+            gcode_string = "M84\r\n"
             self.PrintHAT_serial.executeGcode(gcode_string)
-            self.msg("DEBUG: Disable motors using M18 G-code command")
+            self.msg("DEBUG: Stop the idle hold on all axis ")
+            # see https://reprap.org/wiki/G-code#M84:_Stop_idle_hold
         else:
             self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
         return
@@ -320,7 +321,6 @@ class StepperWellPositioning():
     WPE_target = None
     WPE_targetRadius = None
     Well_Map = None
-    log_fine_tuning = False
     diaphragm_diameter = 12.0 ## mm
 
     ## @brief StepperWellPositioning()::__init__ initialises the stepper objects for X and Y axis and initialises the gcodeSerial to the class member variable.
@@ -328,7 +328,8 @@ class StepperWellPositioning():
     ## @param Well_data contains the target well specified by the user in the batch.ini file
     def __init__(self, steppers, Well_data, record_path):
         self.stepper_control = steppers
-        self.Well_Map = Well_data
+        self.Well_Map = Well_data        
+        log_fine_tuning = False if record_path is None else True            
         self.path = record_path
         return
 
@@ -373,9 +374,10 @@ class StepperWellPositioning():
     ## @author Robin Meekers
     ## @author Gert van Lagen (ported to new prototype which makes use of the Wrecklab PrintHAT)
     @Slot()
-    def goto_well(self, row, column):
+    def goto_well(self, row, column, adapt_to_well=False):
         print("In goto_well function")
-        self.stepper_control.enableMotors()
+        print(" adapt to well is " + str(adapt_to_well))
+##        self.stepper_control.enableMotors()
         self.signals.process_active.emit()
         self.Stopped = False
         self.stepper_control.setLightPWM(1.0)
@@ -459,20 +461,30 @@ class StepperWellPositioning():
                 self.wait_ms(4999)
             
             self.set_current_well(column, row)
+            print(str(self.WPE_target[0]) + " | " + str(self.WPE_target[1]) + " first run " + str(adapt_to_well))
+            
 
-            if not self.goto_target():
-                self.msg("Well positioning not succeeded.")
-                self.set_current_well(None, None) ## Never reached reference point
-                self.Stopped = True
-                self.signals.process_inactive.emit()
-
-                ## Manual confirmation needed. STM is too fast for the software to catch the last confirmation.
-                self.stepper_control.move_confirmed = True 
-                return False
+            if adapt_to_well:
+                self.goto_target()
             else:
-                self.msg("Well positioning succeeded.")
-                ## Manual confirmation needed. STM is too fast for the software to catch the last confirmation.
-                self.stepper_control.move_confirmed = True
+                self.wait_ms(2000) ## Wait for the snapshot to be stored in self.image
+            self.msg("Well positioning succeeded.")
+            ## Manual confirmation needed. STM is too fast for the software to catch the last confirmation.
+            self.stepper_control.move_confirmed = True
+
+##            if not self.goto_target():
+##                self.msg("Well positioning not succeeded.")
+##                self.set_current_well(None, None) ## Never reached reference point
+##                self.Stopped = True
+##                self.signals.process_inactive.emit()
+##
+##                ## Manual confirmation needed. STM is too fast for the software to catch the last confirmation.
+##                self.stepper_control.move_confirmed = True 
+##                return False
+##            else:
+##                self.msg("Well positioning succeeded.")
+##                ## Manual confirmation needed. STM is too fast for the software to catch the last confirmation.
+##                self.stepper_control.move_confirmed = True
 
         else:
             print("Positioning process inactive, cannot call goto_target positioning controller function.")
@@ -481,7 +493,7 @@ class StepperWellPositioning():
         if row != self.current_well_row or column != self.current_well_column:
             self.msg("moving from: (" + str(self.current_well_row) + " | " + str(self.current_well_column) + ") to: (" + str(row) + " | " + str(column) + ")")
 
-## why can we not disable motors during steps?          
+## why can we not re-enable motors during steps? Because M17 is not implemented by Klipper
 ##        self.stepper_control.disableMotors()
         self.stepper_control.setLightPWM(0.0)
         return True
@@ -498,9 +510,10 @@ class StepperWellPositioning():
         resolution = self.diaphragm_diameter/self.WPE_targetRadius # [mm/px]
 
         run_start_time = current_milli_time()
-        if self.log_fine_tuning:
+        if self.path is not None:
             column, row = self.get_current_well()
-            recording_file_name = os.path.sep.join([self.path, 'goto_target_' + str(round(column)) + '_' + str(round(row)) + '_' + str(run_start_time) + '.csv'])
+            log_file_name = '_'.join([str(run_start_time), 'goto_target', str(round(column)), str(round(row))])
+            recording_file_name = os.path.sep.join([self.path, log_file_name])
             recording_file = open(recording_file_name, "w")
             record_str = "run_time, WPE_target[0], WPE_target[1], WPE_Error[0][0], WPE_Error[0][1]" 
             recording_file.write(record_str + "\n")
@@ -553,7 +566,7 @@ class StepperWellPositioning():
 ##                column, row = self.get_current_well()
 
                 run_time = current_milli_time()-run_start_time
-                if recording_file:
+                if recording_file is not None:
                     record_str = str(run_time) + ',' + str(self.WPE_target[0]) + ',' + str(self.WPE_target[1]) + ',' + str(WPE_Error[0][0]) + ',' + str(WPE_Error[0][1]) 
                     recording_file.write(record_str + "\n")                
 
@@ -575,9 +588,9 @@ class StepperWellPositioning():
                 else:
                     break
                 loops_ += 1
-                if loops_ > 10:
-                    self.msg("More than 10 correction loops, giving up")
-                    return True
+                if loops_ > 20:
+                    self.msg("More than 20 correction loops, giving up")
+                    break
             if not self.process_activity:
                 #self.msg("Returning from alignment controller loop in StepperWellPositioning::goto_target")
                 print("Returning from alignment controller loop in StepperWellPositioning::goto_target")

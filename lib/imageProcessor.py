@@ -168,7 +168,7 @@ class WellPositionEvaluator(QThread):
         ## Hough circle is most accurate when the well is closest to the desired target.
         ## Normalize and adjust contrast 'curve' using clahe
         cv2.normalize(img, img, 0, 255, cv2.NORM_MINMAX)
-        img = cv2.medianBlur(img, 7)
+        img = cv2.medianBlur(img, 11)
         clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(8, 8))
         img = clahe.apply(img)
         circles = cv2.HoughCircles(image=img, method=cv2.HOUGH_GRADIENT, dp=1, param1=40, param2=80, minDist=self.circle_minDistance, minRadius=self.circle_minRadius, maxRadius=self.circle_maxRadius)

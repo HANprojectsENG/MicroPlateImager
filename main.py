@@ -395,7 +395,6 @@ class MainWindow(QDialog):
         
         self.Well_Targets = np.empty((len(Well_KeyList), 1),
         dtype = [('X', 'i2'), ('Y', 'i2'), ('POS', 'U3'), ('Description', 'U100')])
-        self.settings_batch.endArray()
         index = 0
         for Well_Key in Well_KeyList:
             Key_Characters = list(Well_Key)
@@ -606,7 +605,7 @@ if __name__ == '__main__':
 
     ## @param mwi is the MainWindow application.
     mwi = MainWindow()
-    mwi.showMaximized()
+    mwi.show() #Maximized()
 
     #################################
     ## --- Class instantiation --- ##
@@ -614,6 +613,7 @@ if __name__ == '__main__':
 
     ## @param steppers is the XY stepper motor control object. Contains the serial object PrintHAT_serial which interfaces to the STM
     steppers = stepper.StepperControl()
+
     
     ## @param stepper_well_positioning is the positioning instance of the wells making use of the steppers control class instance.
     path = os.path.sep.join([mwi.settings_batch.value("Run/path"), mwi.settings_batch.value("Run/ID")])
@@ -656,7 +656,7 @@ if __name__ == '__main__':
 
     ## Connect steppers to printhat virtual port (this links the klipper software too).
     steppers.PrintHAT_serial.connect("/tmp/printer")
-    
+
     ## Connections of signals representing positioning and movement information
     stepper_well_positioning.signals.snapshot_requested.connect(mwi.Well_Scanner.snapshotRequestedPositioner)
     Batch.signals.snapshot_requested.connect(mwi.Well_Scanner.snapshotRequestedBatchRun)
