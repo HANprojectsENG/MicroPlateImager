@@ -267,6 +267,7 @@ class StepperControl():
         self.signals.process_inactive.emit() ## Stops current batch process if running
         return
 
+    @Slot(float)
     def setLightPWM(self, val):
         ''' Set PrintHAT light output pin to PWM value.
             Args:
@@ -280,6 +281,24 @@ class StepperControl():
         else:
             self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
         return
+
+    @Slot(float)
+    def setFanPWM(self, val):
+        ''' Set PrintHAT fan output pin to PWM value.
+            Args:
+                val (float): PWM dutycycle, between 0.0 and 1.0.
+            Raises:
+            Returns:
+        '''
+        if self.PrintHAT_serial.getConnectionState():
+            clip_val = 1.0
+            val = val if val < clip_val else clip_val
+            gcode_string = "SET_PIN PIN=rpi_fan VALUE=" + str(val) + "\r\n"
+            print(gcode_string)
+            self.PrintHAT_serial.executeGcode(gcode_string)        
+        else:
+            self.msg("DEBUG: No serial connection with STM microcontroller. Restart the program.")
+        return    
 
     def enableMotors(self):
 ## why can we not re-enable motors during steps? Because M17 is not implemented by Klipper
@@ -588,8 +607,8 @@ class StepperWellPositioning():
                 else:
                     break
                 loops_ += 1
-                if loops_ > 20:
-                    self.msg("More than 20 correction loops, giving up")
+                if loops_ > 5:
+                    self.msg("Too many correction loops, giving up")
                     break
             if not self.process_activity:
                 #self.msg("Returning from alignment controller loop in StepperWellPositioning::goto_target")

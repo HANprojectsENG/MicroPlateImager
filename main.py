@@ -20,6 +20,7 @@ from PySide2.QtCore import QSettings, Signal, Slot, Qt, QThread, QEventLoop, QTi
 from lib.checkOS import *
 from lib.imageProcessor import *
 from lib.PiCam import PiVideoStream
+from lib.temperature import ReadTemperatures
 
 current_milli_time = lambda: int(round(time.time() * 1000))
 
@@ -641,6 +642,8 @@ if __name__ == '__main__':
                                            mwi.getSec(str(mwi.settings_batch.value("Run/duration"))),
                                            mwi.getSec(str(mwi.settings_batch.value("Run/interleave"))))
 
+    tempControl = ReadTemperatures(10,40)
+    
     ## @param Thread_List is a list with instances which have functionality what has to be closed at exit. Thread_List member close functions are called at the end of the main function.
     Thread_List = [Cam_Capturestream, Image_Processor, Batch, stepper_well_positioning]
 
@@ -676,6 +679,9 @@ if __name__ == '__main__':
     Cam_Capturestream.signals.capReady.connect(lambda: mwi.Well_Scanner.capUpdate(Cam_Capturestream.CaptureFrame)) ## For the capture/snapshot images
 #     Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.capUpdate(Image_Processor.image)) ## For the capture/snapshot images
     Image_Processor.signals.result.connect(lambda: mwi.Well_Scanner.prvUpdate(Image_Processor.image)) ## Image for the GUI preview (lower resolution)
+
+    tempControl.heatAlarm.connect(lambda: steppers.setFanPWM(100))
+    tempControl.heatAlarmRemoved.connect(lambda: steppers.setFanPWM(0))
 
     ## Class message signals
     mwi.signals.mes.connect(mwi.LogWindowInsert)
