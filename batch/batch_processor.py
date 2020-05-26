@@ -117,6 +117,9 @@ class BatchProcessor():
             ## Run start time
             run_start_time = current_milli_time()
             actual_postions = []
+            
+            # Home first on avery run
+            self.well_positioner.stepper_control.homeXY()
                 
             for target in self.Well_Targets:
                 if not self.is_active:

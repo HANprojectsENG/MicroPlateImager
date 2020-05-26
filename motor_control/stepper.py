@@ -293,7 +293,7 @@ class StepperControl():
         if self.PrintHAT_serial.getConnectionState():
             clip_val = 1.0
             val = val if val < clip_val else clip_val
-            gcode_string = "SET_PIN PIN=rpi_fan VALUE=" + str(val) + "\r\n"
+            gcode_string = "SET_PIN PIN=rpi_fan VALUE={:1.2f}\r\n".format(val)
             print(gcode_string)
             self.PrintHAT_serial.executeGcode(gcode_string)        
         else:
@@ -671,6 +671,7 @@ class StepperWellPositioning():
     @Slot()
     def close(self):
         self.stepper_control.setLightPWM(0.0)        
+        self.stepper_control.setFanPWM(0.0)        
         self.process_activity = False
         self.Stopped = True
         return
